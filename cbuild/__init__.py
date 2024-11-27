@@ -5,7 +5,7 @@ import configparser
 version = {
     "year" :2024,
     "minor" :0,
-    "patch" :7
+    "patch" :11
 }
 
 def run_command(command):
@@ -25,6 +25,7 @@ def parse_config(file_path):
         'output_type': config['CBUILD'].get('output_type', 'exe'),
         'output_dir': config['CBUILD'].get('output_dir', 'build/'),
         'libraries': config['CBUILD'].get('libraries', '').split(','),
+        'source_dirs': config['CBUILD'].get('source_dirs', '').split(','),
         'project_name': config['CBUILD'].get('project_name', 'MyProject'),
         'include_dirs': config['CBUILD'].get('include_dirs', '').split(','),
         'library_dirs': config['CBUILD'].get('library_dirs', '').split(',')
@@ -32,7 +33,7 @@ def parse_config(file_path):
 
 def collect_source_files(source_dir):
     source_files = []
-    for root, _, files in os.walk(source_dir):
+    for root, _, files in os.walk(source_dir.strip()):
         for file in files:
             if file.endswith('.c'):
                 source_files.append(os.path.join(root, file))
@@ -46,6 +47,7 @@ def build_project(config):
     libraries = config['libraries']
     source_dir = config['source_dir']
     output_dir = config['output_dir']
+    source_dirs = config['source_dirs']
     output_type = config['output_type']
     include_dirs = config['include_dirs']
     library_dirs = config['library_dirs']
@@ -64,6 +66,10 @@ def build_project(config):
 
     if source_dir:
         sources += collect_source_files(source_dir)
+    
+    if source_dirs:
+        for d in source_dirs:
+            sources += collect_source_files(d)
 
     object_files = []
     for source in sources:
@@ -99,4 +105,3 @@ def main():
     config = parse_config(args.config)
 
     build_project(config)
-
