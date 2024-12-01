@@ -1,15 +1,20 @@
+Here's an updated README to reflect the new JSON-based configuration system and provide clearer instructions:
+
+---
+
 # CBuild
-CBuild is a lightweight and straightforward command-line build tool for C projects, designed to simplify the compilation process without the bloat and complexity of CMake. It provides just enough functionality to compile and link C source code with ease, making it ideal for small to medium-sized projects.
+
+CBuild is a lightweight and straightforward command-line build tool for C projects. It simplifies the compilation process without the complexity of tools like CMake, making it perfect for small to medium-sized projects with minimal dependencies.
 
 <br>
 
 ## Features
 
-- **Minimal Configuration**: Specify project details in a `.cbuild` configuration file.
-- **Compiler Support**: Choose your compiler (currently supports MinGW GCC; others planned).
-- **Automatic Dependency Handling**: Collects `.c` files from source directories and includes them in the build process.
-- **Target Output**: Supports building executables (`.exe`), shared libraries (`.dll`), and static libraries (`.a`).
-- **Cross-Platform Design**: Although developed with Windows in mind, future versions aim for broader compatibility.
+- **Simple JSON Configuration**: Define project settings in a JSON-based `.cbuild` file.
+- **Compiler Support**: Currently supports MinGW GCC, with plans to support Emscripten, Clang, MSVC, and more.
+- **Automatic Source Management**: Collects `.c` files from specified directories for compilation.
+- **Flexible Target Output**: Build executables (`.exe`), shared libraries (`.dll`/`.so`), and static libraries (`.a`).
+- **Cross-Platform Design**: While currently targeting Windows, future updates aim to support Linux and macOS.
 
 <br>
 
@@ -27,37 +32,54 @@ pip install cbuild
 
 ### Step 1. Create a `.cbuild` Configuration File
 
-The `.cbuild` file defines your project settings. Here's an example:
+The `.cbuild` file now uses JSON format to specify project settings. Here's an example configuration:
 
-```ini
-[CBUILD]
-compiler = gcc              # specify a compiler
-defines = DEBUG             #  (comma-separated) pre-processing defines
-source_dir = src            # target a directory for recursive search
-sources = main.c, utils.c   #  (comma-separated) target specific source files
-output_type = exe           # spcify the type of file returned
-output_dir = build/         # specify the target output directory
-libraries = m               #  (comma-separated) specify project ld flags
-include_dirs = include      #  (comma-separated) specify paths to project include directories
-library_dirs = lib          #  (comma-separated) specify paths to linked-libraries
-project_name = MyProject    # specify the target output's name
+```json
+{
+    "compiler": "MinGW",
+    "project": "MyProject",
+    "include_dirs": ["include"],
+    "source_files": [],
+    "source_dirs": ["src"],
+    "libraries": {
+        "gdi32": null,
+        "opengl32": null
+    },
+    "flags": [],
+    "defines": [],
+    "output": "exe",
+    "output_dir": "build"
+}
 ```
+
+- **`compiler`**: Compiler to use (e.g., MinGW, Clang).
+- **`project`**: Name of the output file (without extension).
+- **`include_dirs`**: List of directories to search for header files.
+- **(Optional) `source_files`**: List of paths to source files.
+- **`source_dirs`**: Directories containing source files.
+- **`libraries`**: Key-value pairs of libraries to link. Value is optional for default system paths.
+- **(Optional) `flags`**: List of compiler flags to be used during this build.
+- **(Optional) `defines`**: List of project directives to be defined by the pre-processor.
+- **`output`**: Type of output file (`exe`, `dll`, `a`, etc.).
+- **`output_dir`**: Directory for generated output.
+
+<br>
 
 ### Step 2. Build Your Project
 
-Run the following command, pointing to your `.cbuild` configuration file:
+Run the following command, specifying your `.cbuild` configuration file:
 
 ```bash
 cbuild myproject.cbuild
 ```
 
-This will compile and link your project, generating the output in the specified `output_dir`.
+This will compile and link your project, placing the output in the specified `output_dir`.
 
 <br>
 
 ## Example Usage
 
-Given a directory structure like this, the configuration outlined in `Step 1` will work just fine!:
+Given the following directory structure:
 
 ```
 MyProject/
@@ -69,12 +91,15 @@ MyProject/
 ├── myproject.cbuild
 ```
 
-Running `cbuild myproject.cbuild` will:
+A `.cbuild` configuration like the one in **Step 1** will:
 
 1. Compile `main.c` and `utils.c` into object files.
-2. Link the object files into an executable called `MyProject.exe` in the `build/` directory.
+2. Link them into an executable called `MyProject.exe` in the `build` directory.
+
+#### [ NOTE: CBuild will create and store object files at `config[output_dir]\\ofiles`. This directory can be safely removed after a build has completed. ]
 
 <br>
+
 
 ## Why CBuild?
 
@@ -85,7 +110,7 @@ While tools like CMake are powerful, they can be overly complex for straightforw
 ## CBUILD's Wishlist
 
 1. **Add Compiler Support**:
-   - Extend support for Clang, MSVC, and other compilers.
+   - Extend support for Emscripten, Clang, MSVC, and other compilers.
    - Auto-detect the default system compiler.
 
 2. **Cross-Platform Compatibility**:
@@ -93,7 +118,7 @@ While tools like CMake are powerful, they can be overly complex for straightforw
    - Replace calls to `os.system` with `subprocess` for better portability.
 
 3. **Custom Build Scripts**:
-   - Allow users to define pre-build or post-build commands.
+   - Allow users to toggle pre-build or post-build routines.
 
 4. **Improved Error Handling**:
    - Provide more descriptive errors when commands fail.
