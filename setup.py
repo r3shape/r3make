@@ -3,7 +3,7 @@ import setuptools
 version = {
     "year" :2024,
     "minor" :0,
-    "patch" :11
+    "patch" :15
 }
 
 setuptools.setup(
@@ -17,6 +17,7 @@ setuptools.setup(
     url='https://github.com/d34d0s/cbuild',
     packages=setuptools.find_packages(),
     install_requires=[
+        "rich"
     ],
     entry_points={
         'console_scripts': [
