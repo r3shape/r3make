@@ -1,7 +1,3 @@
-Here's an updated README to reflect the new JSON-based configuration system and provide clearer instructions:
-
----
-
 # CBuild
 
 CBuild is a lightweight and straightforward command-line build tool for C projects. It simplifies the compilation process without the complexity of tools like CMake, making it perfect for small to medium-sized projects with minimal dependencies.
