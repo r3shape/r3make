@@ -1,5 +1,7 @@
 import os
 
+SEP = os.path.sep
+
 from rich.table import Table
 from rich.panel import Panel
 from rich.console import Console
@@ -28,10 +30,10 @@ def build_project(console:Console, config) -> None:
     include_dirs = []
     if len(config["include_dirs"]):
         for include_dir in config["include_dirs"]:
-            if not os.path.exists(include_dir.strip()):
-                print(f"Include Directory Not Found: {include_dir.strip()}")
+            if not os.path.exists(include_dir):
+                print(f"Include Directory Not Found: {include_dir}")
                 return None
-            else: include_dirs.append(include_dir.strip())
+            else: include_dirs.append(include_dir)
     
     # validate configured library directories
     libraries = {}
@@ -40,15 +42,18 @@ def build_project(console:Console, config) -> None:
             if not path:
                 libraries[lib] = None
                 continue
-            if not os.path.exists(path.strip()):
-                print(f"Library ({lib}) Path Not Found: {path.strip()}")
+            if not os.path.exists(path):
+                print(f"Library ({lib}) Path Not Found: {path}")
                 return None
             if fetch_library(lib, path):
                 libraries[lib] = path
         
     # validate configured output directory
     if not os.path.exists(config["output_dir"]):
-        os.mkdir(str(config["output_dir"]).replace("/", "\\"))
+        root = config["output_dir"].split(SEP)[0]
+        dirs = config["output_dir"].split(SEP)[1:]
+        os.mkdir(root)
+        for d in dirs: os.mkdir(f"{root}{SEP}{d}")
     
     # collect all source files from all possible source fields
     source_files:str = ""
@@ -56,24 +61,24 @@ def build_project(console:Console, config) -> None:
         source_files += " ".join(config["source_files"])
     if len(config["source_dirs"]):
         for source_dir in config["source_dirs"]:
-            source_files += " ".join(fetch_files(".c", source_dir))
+            source_files += " ".join(fetch_files(".c", source_dir)) + " "
     source_files = [*map(str.strip, source_files.split())]
 
     # set compiler flags
-    [ cinstance.flags.append(flag.strip()) for flag in config["flags"] if len(config["flags"]) ]
+    [ cinstance.flags.append(flag) for flag in config["flags"] if len(config["flags"]) ]
     
     # collect defines
     compiler_defines = []
-    [ compiler_defines.append(define.strip()) for define in config["defines"] if len(config["defines"]) ]
+    [ compiler_defines.append(define) for define in config["defines"] if len(config["defines"]) ]
     
     # validate configured output type
     if config["output"] not in cinstance.outtypes:
         print(f"({cinstance.name}-Instance) Invalid Output Type: {config["output"]}")
 
     # create optional `ofiles` directory
-    if not os.path.exists(f"{config["output_dir"]}\\ofiles"):
+    if not os.path.exists(f"{config["output_dir"]}{SEP}ofiles"):
         try:
-            os.mkdir(f"{config["output_dir"]}\\ofiles")
+            os.mkdir(f"{config["output_dir"]}{SEP}ofiles")
         except Exception as e:
             print(e)
             return None

@@ -77,6 +77,7 @@ def fetch_compiler_instance(compiler_name) -> CompilerInstance:
         return None
 
 def fetch_files(extension:str, directory:str) -> list[str]:
+    directory = directory.replace("\\", "/")
     source_files = []
     if not os.path.exists(directory): return source_files
     for root, _, files in os.walk(directory.strip()):

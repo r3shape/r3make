@@ -3,7 +3,7 @@ import setuptools
 version = {
     "year" :2024,
     "minor" :0,
-    "patch" :15
+    "patch" :16
 }
 
 setuptools.setup(
