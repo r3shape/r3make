@@ -1,4 +1,6 @@
+venv/
 dist/
-.DS_STORE
+TODO
+*.bat
 *.egg-info/
 __pycache__/

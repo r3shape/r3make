@@ -1,6 +1,4 @@
-import os
-import platform
-import subprocess
+import cbuild.utils as utils
 from cbuild.compilers import SUPPORTED_COMPILERS, CompilerInstance
 
 DEFAULT_SEARCH_PATHS: dict[str, list[str]] = {}
@@ -12,27 +10,27 @@ def define_search_paths() -> None:
     """
     global DEFAULT_SEARCH_PATHS
 
-    # common os-specific default paths
-    os_default_paths = {
+    # common utils.os-specific default paths
+    utils.os_default_paths = {
         "Windows": [
-            "C:\\Windows\\System32",
-            "C:\\Windows\\System32\\wbem"
+            utils.os_path("C:\\Windows\\System32"),
+            utils.os_path("C:\\Windows\\System32\\wbem")
         ],
         "Linux": [
-            "/lib",
-            "/usr/lib",
-            "/usr/local/lib"
+            utils.os_path("/lib"),
+            utils.os_path("/usr/lib"),
+            utils.os_path("/usr/local/lib")
         ],
         "Darwin": [
-            "/lib",
-            "/usr/lib",
-            "/usr/local/lib",
-            "/opt/homebrew/lib"  # Homebrew on ARM macOS
+            utils.os_path("/lib"),
+            utils.os_path("/usr/lib"),
+            utils.os_path("/usr/local/lib"),
+            utils.os_path("/opt/homebrew/lib")  # Homebrew on ARM macutils.OS
         ]
     }
 
-    # os-specific defaults
-    DEFAULT_SEARCH_PATHS["OS_DEFAULTS"] = os_default_paths.get(platform.system(), [])
+    # utils.os-specific defaults
+    DEFAULT_SEARCH_PATHS["utils.OS_DEFAULTS"] = utils.os_default_paths.get(utils.platform.system(), [])
 
     for name, compiler in SUPPORTED_COMPILERS.items():
         DEFAULT_SEARCH_PATHS[name] = {
@@ -44,7 +42,7 @@ def define_search_paths() -> None:
         search_command = f"{prefix} -print-search-dirs"
 
         try:
-            result = subprocess.run(
+            result = utils.subprocess.run(
                 search_command,
                 text=True,
                 check=True,
@@ -52,10 +50,10 @@ def define_search_paths() -> None:
                 shell=True
             )
             output = result.stdout
-        except (subprocess.CalledProcessError, FileNotFoundError):
-            # fallback to os.popen if subprocess fails (python and PATH arent cool)
+        except (utils.subprocess.CalledProcessError, FileNotFoundError):
+            # fallback to utils.os.popen if utils.subprocess fails (python and PATH arent cool)
             try:
-                with os.popen(search_command) as proc:
+                with utils.os.popen(search_command) as proc:
                     output = proc.read()
             except FileNotFoundError:
                 print(f"Compiler '{prefix}' not found in PATH.")
@@ -63,10 +61,10 @@ def define_search_paths() -> None:
 
         for line in output.splitlines():
             if line.startswith("libraries: ="):
-                paths = line.split("=", 1)[1].strip().split(os.pathsep)
+                paths = line.split("=", 1)[1].strip().split(utils.os.pathsep)
                 DEFAULT_SEARCH_PATHS[name]["libraries"].extend(paths)
             elif line.startswith("programs: ="):
-                paths = line.split("=", 1)[1].strip().split(os.pathsep)
+                paths = line.split("=", 1)[1].strip().split(utils.os.pathsep)
                 DEFAULT_SEARCH_PATHS[name]["programs"].extend(paths)
 
 def fetch_compiler_instance(compiler_name) -> CompilerInstance:
@@ -77,13 +75,13 @@ def fetch_compiler_instance(compiler_name) -> CompilerInstance:
         return None
 
 def fetch_files(extension:str, directory:str) -> list[str]:
-    directory = directory.replace("\\", "/")
+    directory = utils.os_path(directory)
     source_files = []
-    if not os.path.exists(directory): return source_files
-    for root, _, files in os.walk(directory.strip()):
+    if not utils.os.path.exists(directory): return source_files
+    for root, _, files in utils.os.walk(directory.strip()):
         for file in files:
             if file.endswith(extension):
-                source_files.append(os.path.join(root, file))
+                source_files.append(utils.os.path.join(root, file))
     return source_files
 
 def fetch_library(lib:str, path: str) -> bool:
@@ -91,18 +89,19 @@ def fetch_library(lib:str, path: str) -> bool:
     Recursively searches for library files (.dll, .a, .lib) in the specified directory.
     Returns True if any library is found, otherwise False.
     """
-    if not os.path.exists(path.strip()):
+    path = utils.os_path(path)
+    if not utils.os.path.exists(path):
         return False
 
     define_search_paths()
-    current_dirs = [os.getcwd(), path]
+    current_dirs = [utils.os.getcwd(), path]
 
     for search_path in DEFAULT_SEARCH_PATHS.values():
         current_dirs.extend(search_path)
 
-    # Search recursively across all applicable directories
+    # Search recursively acrutils.oss all applicable directories
     for directory in set(current_dirs):
-        for root, _, files in os.walk(directory.strip()):
+        for root, _, files in utils.os.walk(directory.strip()):
             for file in files:
                 if file.endswith(('.dll', '.a', '.lib')) and file.split(".")[0] == lib:
                     return True

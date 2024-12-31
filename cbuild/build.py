@@ -1,6 +1,6 @@
 import os
 
-SEP = os.path.sep
+import cbuild.utils as utils
 
 from rich.table import Table
 from rich.panel import Panel
@@ -25,6 +25,10 @@ def build_project(console:Console, config) -> None:
 
     # aquire the configured compiler instance
     cinstance:CompilerInstance = fetch_compiler_instance(config['compiler'])
+        
+    # validate configured output directory
+    if not os.path.exists(config["output_dir"]):
+        utils.os_mkdir(config["output_dir"])
     
     # validate configured include directories
     include_dirs = []
@@ -47,13 +51,6 @@ def build_project(console:Console, config) -> None:
                 return None
             if fetch_library(lib, path):
                 libraries[lib] = path
-        
-    # validate configured output directory
-    if not os.path.exists(config["output_dir"]):
-        root = config["output_dir"].split(SEP)[0]
-        dirs = config["output_dir"].split(SEP)[1:]
-        os.mkdir(root)
-        for d in dirs: os.mkdir(f"{root}{SEP}{d}")
     
     # collect all source files from all possible source fields
     source_files:str = ""
@@ -76,9 +73,9 @@ def build_project(console:Console, config) -> None:
         print(f"({cinstance.name}-Instance) Invalid Output Type: {config["output"]}")
 
     # create optional `ofiles` directory
-    if not os.path.exists(f"{config["output_dir"]}{SEP}ofiles"):
+    if not os.path.exists(f"{config["output_dir"]}{utils.SEP}ofiles"):
         try:
-            os.mkdir(f"{config["output_dir"]}{SEP}ofiles")
+            os.mkdir(f"{config["output_dir"]}{utils.SEP}ofiles")
         except Exception as e:
             print(e)
             return None

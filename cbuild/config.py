@@ -1,6 +1,8 @@
 import os
 import json
 
+import cbuild.utils as utils
+
 SEP = os.path.sep
 
 CBUILD_DEFAULT_CONFIG:dict = {
@@ -27,12 +29,12 @@ def parse_config(config_path:str) -> dict | None:
     
     pconfig["flags"] = [ c_flag.strip() for c_flag in pconfig["flags"] ]
     pconfig["defines"] = [ define.strip() for define in pconfig["defines"] ]
-    pconfig["output_dir"] = pconfig["output_dir"].strip().replace("\\", SEP)
-    pconfig["source_dirs"] = [ src_dir.strip().replace("\\", SEP) for src_dir in pconfig["source_dirs"] ]
-    pconfig["include_dirs"] = [ inc_dir.strip().replace("\\", SEP) for inc_dir in pconfig["include_dirs"] ]
-    pconfig["source_files"] = [ src_file.strip().replace("\\", SEP) for src_file in pconfig["source_files"] ]
+    pconfig["output_dir"] = utils.os_path(pconfig["output_dir"])
+    pconfig["source_dirs"] = [ utils.os_path(src_dir) for src_dir in pconfig["source_dirs"] ]
+    pconfig["include_dirs"] = [ utils.os_path(inc_dir) for inc_dir in pconfig["include_dirs"] ]
+    pconfig["source_files"] = [ utils.os_path(src_file) for src_file in pconfig["source_files"] ]
     
-    for lib, path in pconfig["libraries"].items():
-        pconfig["libraries"][lib] = path.strip().replace("\\", SEP) if isinstance(path, str) else None
+    for lib, lib_path in pconfig["libraries"].items():
+        pconfig["libraries"][lib] = utils.os_path(lib_path) if isinstance(lib_path, str) else None
 
     return pconfig
