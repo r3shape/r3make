@@ -1,4 +1,6 @@
 # CBuild
+![PyPi Package version](https://img.shields.io/pypi/v/cbuild?style=for-the-badge&logo=pypi&logoColor=green&label=Cbuild&labelColor=black&color=white&link=https%3A%2F%2Fpypi.org%2Fproject%2Fcbuild%2F2024.0.19%2F
+)
 
 CBuild is a lightweight and straightforward command-line build tool for C projects. It simplifies the compilation process without the complexity of tools like CMake, making it perfect for small to medium-sized projects with minimal dependencies.
 
