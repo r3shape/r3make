@@ -44,7 +44,6 @@ def cbuild_build(console:Console, config) -> None:
     if not isinstance(config, dict): return None
 
     # extract compiler configuration
-    print(config["c-instance"])
     c_instance:BaseCompiler = fetch_compiler_instance(config["c-instance"])
     if not isinstance(c_instance, BaseCompiler): return None
     
