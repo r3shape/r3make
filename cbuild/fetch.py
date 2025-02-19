@@ -1,5 +1,5 @@
 import cbuild.utils as utils
-from cbuild.compilers import SUPPORTED_COMPILERS, CompilerInstance
+from cbuild.compiler import SUPPORTED_COMPILERS, BaseCompiler
 
 DEFAULT_SEARCH_PATHS: dict[str, list[str]] = {}
 
@@ -10,7 +10,7 @@ def define_search_paths() -> None:
     """
     global DEFAULT_SEARCH_PATHS
 
-    # common utils.os-specific default paths
+    # common os-specific default paths
     utils.os_default_paths = {
         "Windows": [
             utils.os_path("C:\\Windows\\System32"),
@@ -29,7 +29,7 @@ def define_search_paths() -> None:
         ]
     }
 
-    # utils.os-specific defaults
+    # os-specific defaults
     DEFAULT_SEARCH_PATHS["utils.OS_DEFAULTS"] = utils.os_default_paths.get(utils.platform.system(), [])
 
     for name, compiler in SUPPORTED_COMPILERS.items():
@@ -51,7 +51,7 @@ def define_search_paths() -> None:
             )
             output = result.stdout
         except (utils.subprocess.CalledProcessError, FileNotFoundError):
-            # fallback to utils.os.popen if utils.subprocess fails (python and PATH arent cool)
+            # fallback to utils.os.popen if utils.subprocess fails (python and environment variables arent cool)
             try:
                 with utils.os.popen(search_command) as proc:
                     output = proc.read()
@@ -67,7 +67,8 @@ def define_search_paths() -> None:
                 paths = line.split("=", 1)[1].strip().split(utils.os.pathsep)
                 DEFAULT_SEARCH_PATHS[name]["programs"].extend(paths)
 
-def fetch_compiler_instance(compiler_name) -> CompilerInstance:
+def fetch_compiler_instance(compiler_name) -> BaseCompiler:
+    # TODO: extend to fetch OS default compiler
     try:
         return SUPPORTED_COMPILERS[compiler_name]
     except (KeyError) as e:
@@ -86,7 +87,7 @@ def fetch_files(extension:str, directory:str) -> list[str]:
 
 def fetch_library(lib:str, path: str) -> bool:
     """
-    Recursively searches for library files (.dll, .a, .lib) in the specified directory.
+    Recursively searches for library files (.dll, .a, .lib, .so) in the specified directory.
     Returns True if any library is found, otherwise False.
     """
     path = utils.os_path(path)
@@ -99,9 +100,9 @@ def fetch_library(lib:str, path: str) -> bool:
     for search_path in DEFAULT_SEARCH_PATHS.values():
         current_dirs.extend(search_path)
 
-    # Search recursively acrutils.oss all applicable directories
+    # Search recursively across all applicable directories
     for directory in set(current_dirs):
         for root, _, files in utils.os.walk(directory.strip()):
             for file in files:
-                if file.endswith(('.dll', '.a', '.lib')) and file.split(".")[0] == lib:
+                if file.endswith(('.dll', '.a', '.lib', '.so')) and file.split(".")[0] == lib:
                     return True

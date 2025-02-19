@@ -1,11 +1,11 @@
-import os
+import os, json
 import platform
 import subprocess
 
 SEP = os.path.sep
 def os_path(path:str=None) -> str:
     if path is None: return None
-    return path.strip().replace("/", os.path.sep).replace("\\", os.path.sep)
+    return path.strip().replace("/", SEP).replace("\\", SEP)
 
 def os_mkdir(path:str=None) -> None:
     if path is None: return None

@@ -1,114 +1,156 @@
-import os
-
 import cbuild.utils as utils
 
 from rich.table import Table
 from rich.panel import Panel
 from rich.console import Console
 
-from cbuild.fetch import fetch_files, fetch_library, fetch_compiler_instance
-from cbuild.compilers import SUPPORTED_COMPILERS, CompilerInstance, GCCCompiler, EMCCCompiler
+from cbuild.commands import CBUILD_COMMANDS
+from cbuild.version import YEAR, MINOR, PATCH
 
-def _rich_build_summary(console:Console, project:str, compiler:str, output:str, outdir:str, sources:list[str]) -> None:
-    table = Table(title=f"Project Build Summary: {project}", show_lines=True)
-    table.add_column("Property", style="cyan", no_wrap=True)
-    table.add_column("Value", style="magenta")
-    table.add_row("Compiler", compiler)
-    table.add_row("Target Directory", outdir)
-    table.add_row("Output Type", output)
-    table.add_row("Source Files", f"{len(sources)} {"files" if len(sources) > 1 else "file"}")
+from cbuild.compiler import SUPPORTED_COMPILERS, BaseCompiler
+from cbuild.fetch import fetch_files, fetch_library, fetch_compiler_instance
+
+def _build_summary(
+        console:Console,
+        c_instance,
+        c_flags,
+        c_defines,
+        src_dirs,
+        src_files,
+        inc_dirs,
+        lib_links,
+        out_dir,
+        out_type,
+        out_name
+        ) -> None:
+    
+    ver = f"{YEAR}.{MINOR}.{PATCH}"
+    table = Table(title=f"Build Summary: {out_name}", caption=f"[bold green]cbuild[/] [bold white]{ver}[/]", show_lines=True)
+    table.add_column("Field", style="bold green", no_wrap=True)
+    table.add_column("Value", style="bold cyan")
+    table.add_row("Compiler", c_instance.name)
+    table.add_row("Flags", " ".join(c_flags))
+    table.add_row("Defines", " ".join(c_defines))
+    table.add_row("Source Files", str(len(src_files)))
+    table.add_row("Source Dirs", " ".join(src_dirs))
+    table.add_row("Include Dirs", " ".join(inc_dirs))
+    table.add_row("Libraries", " ".join(list(lib_links.keys())))
+    table.add_row("Output Dir", out_dir)
+    table.add_row("Output Type", out_type)
     
     console.print(table)
 
-def build_project(console:Console, config) -> None:
+def cbuild_build(console:Console, config) -> None:
     if not isinstance(config, dict): return None
 
-    # aquire the configured compiler instance
-    cinstance:CompilerInstance = fetch_compiler_instance(config['compiler'])
-        
-    # validate configured output directory
-    if not os.path.exists(config["output_dir"]):
-        utils.os_mkdir(config["output_dir"])
+    # extract compiler configuration
+    print(config["c-instance"])
+    c_instance:BaseCompiler = fetch_compiler_instance(config["c-instance"])
+    if not isinstance(c_instance, BaseCompiler): return None
     
-    # validate configured include directories
-    include_dirs = []
-    if len(config["include_dirs"]):
-        for include_dir in config["include_dirs"]:
-            if not os.path.exists(include_dir):
-                print(f"Include Directory Not Found: {include_dir}")
-                return None
-            else: include_dirs.append(include_dir)
+    c_flags = []
+    c_defines = []
+    if len(config["c-flags"]): 
+        c_flags = [ c_flag.strip() for c_flag in config["c-flags"] ]
+    if len(config["c-defines"]): 
+        c_defines = [ c_define.strip() for c_define in config["c-defines"] ]
+
+    # extract source file configuration
+    src_dirs = []
+    for src_dir in config["src-dirs"]:
+        if not utils.os.path.exists(src_dir):
+            print(f"Source Directory Not Found: {src_dir}")
+            continue
+        src_dirs.append(src_dir)
     
-    # validate configured library directories
-    libraries = {}
-    if len(config["libraries"]):
-        for lib, path in config["libraries"].items():
+    src_files = []
+    for src_dir in src_dirs:
+        for src_file in fetch_files(".c", src_dir):
+            src_files.append(src_file.strip())
+    
+    # extract include file configuration
+    inc_dirs = []
+    for inc_dir in config["inc-dirs"]:
+        if not utils.os.path.exists(inc_dir):
+            print(f"Include Directory Not Found: {inc_dir}")
+            continue
+        inc_dirs.append(inc_dir)
+    
+    # extract linked library configuration
+    lib_links = {}
+    if len(config["lib-links"]):
+        for lib, path in config["lib-links"].items():
             if not path:
-                libraries[lib] = None
+                lib_links[lib] = None
                 continue
-            if not os.path.exists(path):
+            if not utils.os.path.exists(path):
                 print(f"Library ({lib}) Path Not Found: {path}")
-                return None
+                continue
             if fetch_library(lib, path):
-                libraries[lib] = path
+                lib_links[lib] = path
     
-    # collect all source files from all possible source fields
-    source_files:str = ""
-    if len(config["source_files"]):
-        source_files += " ".join(config["source_files"])
-    if len(config["source_dirs"]):
-        for source_dir in config["source_dirs"]:
-            source_files += " ".join(fetch_files(".c", source_dir)) + " "
-    source_files = [*map(str.strip, source_files.split())]
+    # extract output configuration
+    out_dir = config["out-dir"]
+    if not utils.os.path.exists(out_dir):
+        utils.os_mkdir(out_dir)
+    
+    out_type = config["out-type"]
+    if out_type not in c_instance.out_types:
+        print(f"({c_instance.name}) Invalid Output Type: {out_type}")
 
-    # set compiler flags
-    [ cinstance.flags.append(flag) for flag in config["flags"] if len(config["flags"]) ]
-    
-    # collect defines
-    compiler_defines = []
-    [ compiler_defines.append(define) for define in config["defines"] if len(config["defines"]) ]
-    
-    # validate configured output type
-    if config["output"] not in cinstance.outtypes:
-        print(f"({cinstance.name}-Instance) Invalid Output Type: {config["output"]}")
+    out_name = config["out-name"]
 
-    # create optional `ofiles` directory
-    if not os.path.exists(f"{config["output_dir"]}{utils.SEP}ofiles"):
+    # extract cbuild commands
+    pre_commands = config["cbuild"]["pre-build"]
+    post_commands = config["cbuild"]["post-build"]
+    for command in pre_commands:
+        if command in CBUILD_COMMANDS:
+            CBUILD_COMMANDS[command](config, param=pre_commands[command])
+
+    _build_summary(
+        console,
+        c_instance,
+        c_flags,
+        c_defines,
+        src_dirs,
+        src_files,
+        inc_dirs,
+        lib_links,
+        out_dir,
+        out_type,
+        out_name
+    )
+
+    # compile source code into object files
+    if not utils.os.path.exists(f"{config["out-dir"]}{utils.SEP}ofiles"):
         try:
-            os.mkdir(f"{config["output_dir"]}{utils.SEP}ofiles")
+            utils.os.mkdir(f"{config["out-dir"]}{utils.SEP}ofiles")
         except Exception as e:
             print(e)
             return None
 
-    _rich_build_summary(
-        console,
-        config["project"],
-        cinstance.name,
-        config["output"],
-        config["output_dir"],
-        source_files,
-    )
-
-    # compile source code into object files
-    ofiles:list[str] = cinstance.compile(
-        console,
-        compiler_defines,
-        source_files,
-        include_dirs,
-        config["output_dir"]
+    ofiles:list[str] = c_instance.compile(
+        c_flags,
+        c_defines,
+        src_files,
+        inc_dirs,
+        out_dir
     )
 
     # link object files into final output
-    result:bool|Exception = cinstance.link(
-        config["project"],
-        config["output"],
-        libraries,
+    result:bool = c_instance.link(
         ofiles,
-        config["output_dir"]
+        lib_links,
+        out_name,
+        out_type,
+        out_dir
     )
 
-    if isinstance(result, Exception):
-        console.print(Panel(f"[bold red]CBUILD[/] Build Failed", expand=False))
-    elif isinstance(result, bool) and result == True:
-        console.print(Panel(f"[bold green]CBUILD[/] Build Success", expand=False))
+    for command in post_commands:
+        if command in CBUILD_COMMANDS:
+            CBUILD_COMMANDS[command](config, param=post_commands[command])
 
+    if isinstance(result, Exception):
+        console.print(Panel(f"[bold red]cbuild[/] Build Failed", expand=False))
+    elif isinstance(result, bool) and result == True:
+        console.print(Panel(f"[bold green]cbuild[/] Build Success", expand=False))
