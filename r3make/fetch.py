@@ -1,5 +1,5 @@
-import cbuild.utils as utils
-from cbuild.compiler import SUPPORTED_COMPILERS, BaseCompiler
+import r3make.utils as utils
+from r3make.compiler import SUPPORTED_COMPILERS, BaseCompiler
 
 DEFAULT_SEARCH_PATHS: dict[str, list[str]] = {}
 

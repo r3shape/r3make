@@ -7,21 +7,21 @@ version = {
 }
 
 setuptools.setup(
-    name='cbuild',
+    name='r3make',
     version=f"{version["year"]}.{version["minor"]}.{version["patch"]}",
     description='A command-line build tool for C without the bloat of CMake.',
     long_description=open('README.md').read(),
     long_description_content_type='text/markdown',
     author='Izaiyah Stokes',
     author_email='d34d0s.dev@gmail.com',
-    url='https://github.com/r3shape/cbuild',
+    url='https://github.com/r3shape/r3make',
     packages=setuptools.find_packages(),
     install_requires=[
         "rich"
     ],
     entry_points={
         'console_scripts': [
-            'cbuild = cbuild:main'
+            'r3make = r3make:main'
         ]
     },
     classifiers=[

@@ -1,14 +1,14 @@
-import cbuild.utils as utils
+import r3make.utils as utils
 
 from rich.table import Table
 from rich.panel import Panel
 from rich.console import Console
 
-from cbuild.commands import CBUILD_COMMANDS
-from cbuild.version import YEAR, MINOR, PATCH
+from r3make.commands import CBUILD_COMMANDS
+from r3make.version import YEAR, MINOR, PATCH
 
-from cbuild.compiler import SUPPORTED_COMPILERS, BaseCompiler
-from cbuild.fetch import fetch_files, fetch_library, fetch_compiler_instance
+from r3make.compiler import SUPPORTED_COMPILERS, BaseCompiler
+from r3make.fetch import fetch_files, fetch_library, fetch_compiler_instance
 
 def _build_summary(
         console:Console,
@@ -25,7 +25,7 @@ def _build_summary(
         ) -> None:
     
     ver = f"{YEAR}.{MINOR}.{PATCH}"
-    table = Table(title=f"Build Summary: {out_name}", caption=f"[bold green]cbuild[/] [bold white]{ver}[/]", show_lines=True)
+    table = Table(title=f"Build Summary: {out_name}", caption=f"[bold green]r3make[/] [bold white]{ver}[/]", show_lines=True)
     table.add_column("Field", style="bold green", no_wrap=True)
     table.add_column("Value", style="bold cyan")
     table.add_row("Compiler", c_instance.name)
@@ -40,7 +40,7 @@ def _build_summary(
     
     console.print(table)
 
-def cbuild_build(console:Console, config) -> None:
+def r3make_build(console:Console, config) -> None:
     if not isinstance(config, dict): return None
 
     # extract compiler configuration
@@ -99,9 +99,9 @@ def cbuild_build(console:Console, config) -> None:
 
     out_name = config["out-name"]
 
-    # extract cbuild commands
-    pre_commands = config["cbuild"]["pre-build"]
-    post_commands = config["cbuild"]["post-build"]
+    # extract r3make commands
+    pre_commands = config["r3make"]["pre-build"]
+    post_commands = config["r3make"]["post-build"]
     for command in pre_commands:
         if command in CBUILD_COMMANDS:
             CBUILD_COMMANDS[command](config, param=pre_commands[command])
@@ -150,6 +150,6 @@ def cbuild_build(console:Console, config) -> None:
             CBUILD_COMMANDS[command](config, param=post_commands[command])
 
     if isinstance(result, Exception):
-        console.print(Panel(f"[bold red]cbuild[/] Build Failed", expand=False))
+        console.print(Panel(f"[bold red]r3make[/] Build Failed", expand=False))
     elif isinstance(result, bool) and result == True:
-        console.print(Panel(f"[bold green]cbuild[/] Build Success", expand=False))
+        console.print(Panel(f"[bold green]r3make[/] Build Success", expand=False))
