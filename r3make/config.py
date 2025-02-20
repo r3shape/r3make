@@ -25,7 +25,7 @@ def parse_config(config_path:str) -> dict | None:
     
     # parse the config and set default values
     pconfig = {key: config.get(key, CBUILD_DEFAULT_CONFIG[key]) for key in CBUILD_DEFAULT_CONFIG}
-    pconfig["r3make"] = {k: config["r3make"].get(k, {}) for k in CBUILD_DEFAULT_CONFIG["r3make"]}
+    pconfig["r3make"] = {k: config["r3make"].get(k, {}) for k in CBUILD_DEFAULT_CONFIG["r3make"] if config.get("r3make", None)}
     
     # parse compiler instace configuration
     pconfig["c-flags"] = [ c_flag.strip() for c_flag in pconfig["c-flags"] ]

@@ -100,11 +100,11 @@ def r3make_build(console:Console, config) -> None:
     out_name = config["out-name"]
 
     # extract r3make commands
-    pre_commands = config["r3make"]["pre-build"]
-    post_commands = config["r3make"]["post-build"]
-    for command in pre_commands:
-        if command in CBUILD_COMMANDS:
-            CBUILD_COMMANDS[command](config, param=pre_commands[command])
+    if config.get("r3make", None):
+        pre_commands = config["r3make"]["pre-build"]
+        for command in pre_commands:
+            if command in CBUILD_COMMANDS:
+                CBUILD_COMMANDS[command](config, param=pre_commands[command])
 
     _build_summary(
         console,
@@ -145,9 +145,11 @@ def r3make_build(console:Console, config) -> None:
         out_dir
     )
 
-    for command in post_commands:
-        if command in CBUILD_COMMANDS:
-            CBUILD_COMMANDS[command](config, param=post_commands[command])
+    if config.get("r3make", None):
+        post_commands = config["r3make"]["post-build"]
+        for command in post_commands:
+            if command in CBUILD_COMMANDS:
+                CBUILD_COMMANDS[command](config, param=post_commands[command])
 
     if isinstance(result, Exception):
         console.print(Panel(f"[bold red]r3make[/] Build Failed", expand=False))
