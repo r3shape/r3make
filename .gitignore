@@ -2,5 +2,6 @@ venv/
 dist/
 TODO
 *.bat
+setup.py
 *.egg-info/
 __pycache__/
