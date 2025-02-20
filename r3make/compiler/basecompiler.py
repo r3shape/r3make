@@ -1,7 +1,7 @@
 from rich.console import Console
 from rich.progress import Progress, BarColumn, SpinnerColumn
 
-import cbuild.utils as utils
+import r3make.utils as utils
 
 class BaseCompiler:
     def __init__(
