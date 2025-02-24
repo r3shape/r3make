@@ -51,7 +51,7 @@ The `.r3make` file now uses JSON format to specify project settings. Here's an e
 ```
 
 - **(Optional) `r3make`**: Dictionary of pre and post r3make commands for this build.
-- **`c-instance`**: Compiler to use (e.g., MinGW GCC, Emscripten, Clang).
+- **`c-instance`**: Compiler to use (currently supported: GCC, CLANG, EMCC).
 - **(Optional) `c-flags`**: List of compiler flags to be used during this build.
 - **(Optional) `c-deines`**: List of project directives to be defined by the pre-processor.
 - **`inc-dirs`**: List of directories to search for header files.
