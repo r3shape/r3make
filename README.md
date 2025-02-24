@@ -116,23 +116,19 @@ While tools like CMake are powerful, they can be overly complex for straightforw
 
 <br>
 
-## CBUILD's Wishlist
+## r3make's Wishlist
 
-1. **Add Compiler Support**:
-   - Extend `BaseCompiler` with support for Emscripten, Clang, MSVC, and other compilers.
-   - Auto-detect the default system compiler.
-
-2. **Improved Error Handling**:
+1. **Improved Error Handling**:
    - Provide more descriptive errors when builds fail.
    - Catch common misconfigurations in the `.r3make` file.
 
-3. **Incremental Builds**:
+2. **Incremental Builds**:
    - Implement a mechanism to skip recompilation of unchanged files.
 
-4. **Verbose Mode**:
+3. **Verbose Mode**:
    - Add a CLI flag for detailed logging of compilation steps.
 
-5. **Parallel Builds**:
+4. **Parallel Builds**:
    - Utilize multiple CPU cores to speed up compilation.
 
 <br>
