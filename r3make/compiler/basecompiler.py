@@ -40,7 +40,7 @@ class BaseCompiler:
     def link(self, ofiles: list[str], lib_links: dict[str, str], out_name: str, out_type: str, out_dir: str) -> bool:
         ofile_str = " ".join(ofiles)
         lib_str = " ".join([f"-l{lib}" for lib in lib_links])
-        lib_dir_str = " ".join([f"-L{lib_links[lib]}" for lib in lib_links if lib_links[lib]])
+        lib_dir_str = " ".join([f"-L{lib_links[lib]}" for lib in lib_links if lib_links[lib] != None])
 
         out_ext = f".{out_type}" if out_type in self.out_types else ""
 
