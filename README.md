@@ -112,7 +112,7 @@ This configuration will:
 <br>
 
 ## Automating Dependency Fetching With r3make
-> Note: Any dependency left with a path value of `null` in the configuration will be searched for in the current working directory, then OS specific library locations, and finally the default search locations of your selected compiler instance. (System libraries like opengl32 dont require a path to be specified.)
+> Note: Any dependency left with a path value of `null` in the configuration will be searched for (recursively) in the current working directory, then OS specific library locations, and finally the default search locations of your selected compiler instance. (System libraries like opengl32 dont require a path to be specified.)
 
 r3make supports a configuration field named after the tool `r3make`. This field is used to invoke r3make `pre-build` and `post-build` commands, thus these are the field names of the `r3make` fields.
 
