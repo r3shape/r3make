@@ -140,7 +140,7 @@ Well r3make has the ability to clone and build dependencies from Github, and mak
 In the root of your project's repository, create a directory named `.r3make`.
 
 Next simply add your project's `.r3make` configuration into this directory.
-> Note: Your project's `.r3make` script must start with the name of your project's repo, so a library named `somelib` would have `somelib.r3make` live in this directory.
+> Note: Your project's `.r3make` script must start with the name of your project's repo, so a repository named `somelib` would have `somelib.r3make` live in this directory.
 
 Commit and push the changes, and thats it!
 
