@@ -9,7 +9,7 @@ r3make is a lightweight and straightforward command-line build tool for C projec
 ## Features
 
 - **Simple JSON Configuration**: Define project settings in a JSON-based `.r3make` file.
-- **Compiler Support**: Currently supports MinGW GCC, with plans to support Emscripten, Clang, MSVC, and more.
+- **Compiler Support**: Currently supports MinGW GCC, Emscripten, Clang, and MSVC.
 - **Automatic Source Management**: Collects `.c` files from specified directories for compilation.
 - **Flexible Target Output**: Build executables (`.exe`), shared libraries (`.dll`/`.so`/`.dylib`), and soon static libraries (`.a`/`.lib`).
 - **Cross-Platform Design**: While currently built and maintained on Windows, future updates aim to support Linux and MacOS.
