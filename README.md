@@ -175,7 +175,7 @@ Following the above should yield these fields:
 ```
 
 Now your all set, and ready to build!
-> Note: The `gitdeps` command clones dependencies into a default library path based on your operating system. This command may fail if your OS requires admin privilages to read/write to this directory!
+> Note: The `gitdeps` command clones dependencies into a default library path based on your operating system. This command may fail if your OS requires admin privileges to read/write to this directory!
 
 <br>
 
