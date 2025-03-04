@@ -1,4 +1,6 @@
 import r3make.utils as utils
+from rich.panel import Panel
+from rich.console import Console
 
 CBUILD_DEFAULT_CONFIG:dict = {
     "r3make": {
@@ -9,6 +11,7 @@ CBUILD_DEFAULT_CONFIG:dict = {
     "c-flags": [],
     "c-defines": [],
     "src-dirs": [],
+    "src-files": [],
     "inc-dirs": [],
     "lib-links": {},
     "out-dir": "bin",
@@ -17,6 +20,9 @@ CBUILD_DEFAULT_CONFIG:dict = {
 }
 
 def parse_config(config_path:str) -> dict | None:
+    if not config_path.endswith(".r3make"):
+        Console().print(Panel(f"[bold red]r3make[/] r3make configurations must have the extension `.r3make` !!!", expand=False))
+        return None
     if not utils.os.path.exists(config_path): return None
 
     with open(config_path, "rb") as f:
@@ -33,6 +39,7 @@ def parse_config(config_path:str) -> dict | None:
     
     # parse source file configuration
     pconfig["src-dirs"] = [ utils.os_path(src_dir) for src_dir in pconfig["src-dirs"] ]
+    pconfig["src-files"] = [ utils.os_path(src_file) for src_file in pconfig["src-files"] ]
     
     # parse include file configuration
     pconfig["inc-dirs"] = [ utils.os_path(src_dir) for src_dir in pconfig["inc-dirs"] ]

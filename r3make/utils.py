@@ -1,6 +1,6 @@
 import os, json
-import platform
 import subprocess
+import signal, platform
 
 SEP = os.path.sep
 def os_path(path:str=None) -> str:

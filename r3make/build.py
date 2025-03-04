@@ -72,6 +72,12 @@ def r3make_build(console:Console, config) -> None:
     for src_dir in src_dirs:
         for src_file in fetch_files(".c", src_dir):
             src_files.append(src_file.strip())
+    for file in config["src-files"]:
+        if utils.os.path.exists(file):
+            src_files.append(utils.os_path(file))
+        else:
+            print(f"unable to locate src file: {file}\n")
+            return
     
     # extract include file configuration
     inc_dirs = []
@@ -121,18 +127,10 @@ def r3make_build(console:Console, config) -> None:
             if command in CBUILD_COMMANDS:
                 CBUILD_COMMANDS[command](config, param=pre_commands[command])
 
-    _build_summary(
-        console,
-        c_instance,
-        c_flags,
-        c_defines,
-        src_dirs,
-        src_files,
-        inc_dirs,
-        lib_links,
-        out_dir,
-        out_type,
-        out_name
+    _build_summary(console,
+        c_instance, c_flags, c_defines,
+        src_dirs, src_files, inc_dirs, lib_links,
+        out_dir, out_type, out_name
     )
 
     # compile source code into object files

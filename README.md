@@ -30,7 +30,7 @@ pip install r3make
 
 ### Step 1. Create a `.r3make` Configuration File
 
-The `.r3make` file now uses JSON format to specify project settings. Here's an example configuration:
+The `.r3make` file uses JSON to specify project settings. Here's an example configuration:
 
 ```json
 {
@@ -42,6 +42,7 @@ The `.r3make` file now uses JSON format to specify project settings. Here's an e
     "c-flags": [],
     "c-defines": [],
     "src-dirs": [],
+    "src-files": [],
     "inc-dirs": [],
     "lib-links": {},
     "out-dir": "bin",
@@ -56,6 +57,7 @@ The `.r3make` file now uses JSON format to specify project settings. Here's an e
 - **(Optional) `c-deines`**: List of project directives to be defined by the pre-processor.
 - **`inc-dirs`**: List of directories to search for header files.
 - **`src-dirs`**: Directories containing source files.
+- **(Optional) `src-files`**: A list containing string paths to source files.
 - **(Optional) `lib-links`**: Key-value pairs of libraries to link. Value is optional for default system paths.
 - **`out-dir`**: Directory for generated output.
 - **`out-type`**: Type of output file (`exe`, `dll`, `a`, etc.).
@@ -105,10 +107,74 @@ This configuration will:
 1. Compile `main.c` and `utils.c` into object files.
 2. Link them into an executable called `MyProject.exe` in the `bin` directory.
 
-#### [ NOTE: r3make will create and store object files at `config[out-dir]\\ofiles`. This directory can be safely removed after a build has completed wither manually or with the `nofiles` post-build command. ]
+>Note: r3make will create and store object files at `config[out-dir]\\ofiles`. This directory can be safely removed after a build has completed either manually or with the `nofiles` post-build command.
 
 <br>
 
+## Automating Dependency Fetching With r3make
+r3make supports a configuration field named after the tool `r3make`. This field is used to invoke r3make `pre-build` and `post-build` commands, thus these are the field names of the `r3make` fields.
+
+A Valid `r3make` field might look like this:
+```json
+{
+   ...
+   "r3make": {
+      "pre-build": {
+         "command1": null,
+         "command2": "path/to/some/asset",
+      },
+      "post-build": {
+         "command5": [1, 2, 3],
+      }
+   }
+}
+```
+As you can see, r3make commands may be passed parameters of different types, so make sure you research the command you are using, and the parameters expected!
+> Note: all r3make commands take both the calling configuration along with the value attached to the command field.
+
+### How does this help further automate a build?
+Well r3make has the ability to clone and build dependencies from Github, and making a project available to the CLI is as simple as the following:
+
+In the root of your project's repository, create a directory named `.r3make`.
+
+Next simply add your project's `.r3make` configuration into this directory.
+
+Commit and push the changes, and thats it!
+
+<br>
+
+### How about fetching these dependencies as the end-user?
+Thats simple too, just add the *remote-hosted* dependency to your project's `.r3make` configuration like so:
+
+```json
+{
+   ...
+   "lib-links": {
+      "somelib": null
+   }
+}
+```
+> Note: For fetched dependencies its advised to set the path to the dependency as `null` for your `lib-links` field as it will be cloned to and built in an OS default library path. (The compiler/CLI will be able to find it.)
+
+After that, just add the `gitdeps` command to your `r3make`: `pre-build` field! The `gitdeps` command expects a list of strings as a parameter. These strings should be the `author`/`dep` of your dependency.
+
+Following the above should yield these fields:
+
+```json
+{
+   ...
+   "r3make": {
+      "pre-build": {
+         "gitdeps": ["someguy/somelib"],
+      }
+   }
+}
+```
+
+Now your all set, and ready to build!
+> Note: The `gitdeps` command clones dependencies into a default library path based on your operating system. This command may fail if your OS requires admin privilages to read/write to this directory!
+
+<br>
 
 ## Why r3make?
 

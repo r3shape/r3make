@@ -1,3 +1,3 @@
 YEAR:int = 2025
 MINOR:int = 1
-PATCH:int = 3
+PATCH:int = 4
