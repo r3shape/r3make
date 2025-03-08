@@ -28,9 +28,9 @@ pip install r3make
 
 ## Getting Started
 
-### Step 1. Create a `.r3make` Configuration File
+### Step 1. Create a `r3make` Configuration File
 
-The `.r3make` file uses JSON to specify project settings. Here's an example configuration:
+The `r3make` file uses JSON to specify project settings. Here's an example configuration:
 
 ```json
 {
@@ -72,13 +72,13 @@ The `.r3make` file uses JSON to specify project settings. Here's an example conf
 
 ### Step 2. Build Your Project
 
-Run the following command, specifying your `.r3make` configuration file:
+Run the following command in the same directory as your `r3make` configuration file:
 
 ```bash
-r3make myproject.r3make
+r3make {target}
 ```
 
-This will compile and link your project, placing the output in the specified `out-dir`.
+This will compile and link the specified compilation `{target}`, placing the output in the specified `out-dir`.
 
 <br>
 
@@ -93,20 +93,26 @@ src/
    /utils.c
 include/
        /utils.h
-myproject.r3make
+r3make
 ```
 
-A `.r3make` configuration would look like this:
+A `r3make` configuration would look like this:
 ```json
 {
-    "c-instance": "GCC",
-    "src-dirs": ["src"],
-    "inc-dirs": ["include"],
-    "out-dir": "bin",
-    "out-type": "exe",
-    "out-name": "MyProject",
+   "c-instance": "GCC",
+   "c-targets": {
+      "MyProject": {
+         "src-dirs": ["src"],
+         "inc-dirs": ["include"],
+         "out-dir": "bin",
+         "out-type": "exe",
+         "out-name": "MyProject"
+      }
+   }
 }
 ```
+
+You would then run the following command: `r3make MyProject`
 
 This configuration will:
 1. Compile `main.c` and `utils.c` into object files.
@@ -144,8 +150,7 @@ Well r3make has the ability to clone and build dependencies from Github, and mak
 
 In the root of your project's repository, create a directory named `.r3make`.
 
-Next simply add your project's `.r3make` configuration into this directory.
-> Note: Your project's `.r3make` script must start with the name of your project's repo, so a repository named `somelib` would have `somelib.r3make` live in this directory.
+Next simply add your project's `r3make` configuration into this directory.
 
 Commit and push the changes, and thats it!
 
@@ -194,7 +199,7 @@ While tools like CMake are powerful, they can be overly complex for straightforw
 
 1. **Improved Error Handling**:
    - Provide more descriptive errors when builds fail.
-   - Catch common misconfigurations in the `.r3make` file.
+   - Catch common misconfigurations in the `r3make` file.
 
 2. **Incremental Builds**:
    - Implement a mechanism to skip recompilation of unchanged files.
