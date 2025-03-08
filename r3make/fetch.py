@@ -3,6 +3,13 @@ from r3make.compiler import SUPPORTED_COMPILERS, BaseCompiler
 
 DEFAULT_SEARCH_PATHS: dict[str, list[str]] = {}
 
+fetch_config = lambda: [
+    f"{r}{utils.SEP}{ff}"
+    for r, d, f in utils.os.walk(utils.os.getcwd())
+    for ff in f
+    if ff in ["r3make", "R3MAKE", ".r3make", ".R3MAKE"]
+][0]
+
 def fetch_compiler(compiler_name) -> bool:
     """ Tests to see if a compiler exists/is callable by outputting version info by running: `{compiler.prefix} -v`"""
     try:

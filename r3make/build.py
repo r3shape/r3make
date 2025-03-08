@@ -40,8 +40,11 @@ def _build_summary(
     
     console.print(table)
 
-def r3make_build(console:Console, config) -> None:
+def r3make_build(console:Console, config: dict) -> None:
     if not isinstance(config, dict): return None
+
+    # extract r3make config
+    r3make_config = config.get("r3make", None)
 
     # extract compiler configuration
     if not fetch_compiler(config["c-instance"]):
@@ -60,25 +63,6 @@ def r3make_build(console:Console, config) -> None:
     if len(config["c-defines"]): 
         c_defines = [ c_define.strip() for c_define in config["c-defines"] ]
 
-    # extract source file configuration
-    src_dirs = []
-    for src_dir in config["src-dirs"]:
-        if not utils.os.path.exists(src_dir):
-            print(f"Source Directory Not Found: {src_dir}")
-            continue
-        src_dirs.append(src_dir)
-    
-    src_files = []
-    for src_dir in src_dirs:
-        for src_file in fetch_files(".c", src_dir):
-            src_files.append(src_file.strip())
-    for file in config["src-files"]:
-        if utils.os.path.exists(file):
-            src_files.append(utils.os_path(file))
-        else:
-            print(f"unable to locate src file: {file}\n")
-            return
-    
     # extract include file configuration
     inc_dirs = []
     for inc_dir in config["inc-dirs"]:
@@ -109,6 +93,25 @@ def r3make_build(console:Console, config) -> None:
                         print(f"Library Not Found: {lib}")
                         return
 
+    # extract source file configuration
+    src_dirs = []
+    for src_dir in config["src-dirs"]:
+        if not utils.os.path.exists(src_dir):
+            print(f"Source Directory Not Found: {src_dir}")
+            continue
+        src_dirs.append(src_dir)
+    
+    src_files = []
+    for src_dir in src_dirs:
+        for src_file in fetch_files(".c", src_dir):
+            src_files.append(src_file.strip())
+    for file in config["src-files"]:
+        if utils.os.path.exists(file):
+            src_files.append(utils.os_path(file))
+        else:
+            print(f"unable to locate src file: {file}\n")
+            return
+        
     # extract output configuration
     out_dir = config["out-dir"]
     if not utils.os.path.exists(out_dir):
@@ -119,21 +122,14 @@ def r3make_build(console:Console, config) -> None:
         print(f"({c_instance.name}) Invalid Output Type: {out_type}")
 
     out_name = config["out-name"]
-
-    # extract r3make commands
-    if config.get("r3make", None):
-        pre_commands = config["r3make"]["pre-build"]
+    
+    # extract r3make pre-build commands
+    if r3make_config:
+        pre_commands = r3make_config["pre-build"]
         for command in pre_commands:
             if command in CBUILD_COMMANDS:
                 CBUILD_COMMANDS[command](config, param=pre_commands[command])
 
-    _build_summary(console,
-        c_instance, c_flags, c_defines,
-        src_dirs, src_files, inc_dirs, lib_links,
-        out_dir, out_type, out_name
-    )
-
-    # compile source code into object files
     if not utils.os.path.exists(f"{config["out-dir"]}{utils.SEP}ofiles"):
         try:
             utils.os.mkdir(f"{config["out-dir"]}{utils.SEP}ofiles")
@@ -141,30 +137,49 @@ def r3make_build(console:Console, config) -> None:
             print(e)
             return None
 
-    ofiles:list[str] = c_instance.compile(
-        c_flags,
-        c_defines,
-        src_files,
-        inc_dirs,
-        out_dir
+    # show build summary
+    _build_summary(console,
+        c_instance, c_flags, c_defines,
+        src_dirs, src_files, inc_dirs, lib_links,
+        out_dir, out_type, out_name
     )
 
-    # link object files into final output
-    result:bool = c_instance.link(
-        ofiles,
-        lib_links,
-        out_name,
-        out_type,
-        out_dir
-    )
+    # extract r3make flags
+    # buildeach (builds each source file in the src-files field as a "subtarget" with the file name being the out-name of the subtarget)
+    build_result = False
+    single_target = True
+    r3make_flags = r3make_config["flags"]
+    for flag in r3make_flags:
+        match flag.lower():
+            case "buildeach":                                                       # `buildeach`` flag
+                single_target = False
+                for src in src_files:
+                    out_name = src.removesuffix(".c").split(utils.SEP)[-1]
+                    build_result = c_instance.link(
+                        c_instance.compile(
+                            c_flags, c_defines,
+                            [src], inc_dirs, out_dir
+                        ), lib_links, out_name,
+                        out_type, out_dir
+                    )
+            case _: break
 
-    if config.get("r3make", None):
-        post_commands = config["r3make"]["post-build"]
+    if single_target:
+        build_result = c_instance.link(
+            c_instance.compile(
+                c_flags, c_defines,
+                src_files, inc_dirs, out_dir
+            ), lib_links, out_name,
+            out_type, out_dir
+        )
+
+    # extract r3make post-build commands
+    if r3make_config:
+        post_commands = r3make_config["post-build"]
         for command in post_commands:
             if command in CBUILD_COMMANDS:
                 CBUILD_COMMANDS[command](config, param=post_commands[command])
 
-    if isinstance(result, bool) and result == False:
-        console.print(Panel(f"[bold red]r3make[/] Build Failed", expand=False))
-    elif isinstance(result, bool) and result == True:
-        console.print(Panel(f"[bold green]r3make[/] Build Success", expand=False))
+    # indicate build result
+    if build_result == False: console.print(Panel(f"[bold red]r3make[/] Build Failed", expand=False))
+    elif build_result == True: console.print(Panel(f"[bold green]r3make[/] Build Success", expand=False))

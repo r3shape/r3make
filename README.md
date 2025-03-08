@@ -34,25 +34,30 @@ The `.r3make` file uses JSON to specify project settings. Here's an example conf
 
 ```json
 {
-    "r3make": {
-        "pre-build": {},
-        "post-build": {}
-    },
-    "c-instance": "GCC",
-    "c-flags": [],
-    "c-defines": [],
-    "src-dirs": [],
-    "src-files": [],
-    "inc-dirs": [],
-    "lib-links": {},
-    "out-dir": "bin",
-    "out-type": "exe",
-    "out-name": "program",
+   "c-instance": "GCC",
+    "c-targets": {
+      "my_lib":{
+         "r3make": {
+             "pre-build": {},
+             "post-build": {}
+         },
+         "c-flags": [],
+         "c-defines": [],
+         "src-dirs": [],
+         "src-files": [],
+         "inc-dirs": [],
+         "lib-links": {},
+         "out-dir": "bin",
+         "out-type": "exe",
+         "out-name": "program"
+      }
+    }
 }
 ```
 
 - **(Optional) `r3make`**: Dictionary of pre and post r3make commands for this build.
 - **`c-instance`**: Compiler to use (currently supported: GCC, CLANG, EMCC).
+- **`c-targets`**: Compilation targets for your project.
 - **(Optional) `c-flags`**: List of compiler flags to be used during this build.
 - **(Optional) `c-deines`**: List of project directives to be defined by the pre-processor.
 - **`inc-dirs`**: List of directories to search for header files.
