@@ -46,6 +46,13 @@ def r3make_build(console:Console, config: dict) -> None:
     # extract r3make config
     r3make_config = config.get("r3make", None)
 
+    # extract r3make pre-build commands
+    if r3make_config:
+        pre_commands = r3make_config["pre-build"]
+        for command in pre_commands:
+            if command in CBUILD_COMMANDS:
+                CBUILD_COMMANDS[command](config, param=pre_commands[command])
+
     # extract compiler configuration
     if not fetch_compiler(config["c-instance"]):
         console.print(Panel(f"[bold red]r3make[/] Compiler not found on system: {config["c-instance"]}", expand=False))
@@ -67,7 +74,7 @@ def r3make_build(console:Console, config: dict) -> None:
     inc_dirs = []
     for inc_dir in config["inc-dirs"]:
         if not utils.os.path.exists(inc_dir):
-            print(f"Include Directory Not Found: {inc_dir}")
+            console.print(Panel(f"Include Directory Not Found: {inc_dir}", expand=False))
             continue
         inc_dirs.append(inc_dir)
     
@@ -81,7 +88,7 @@ def r3make_build(console:Console, config: dict) -> None:
                     lib_links[flib] = None
                     continue
                 elif fpath == None or not utils.os.path.exists(fpath):
-                    print(f"Library Not Found: {flib}")
+                    console.print(Panel(f"Library Not Found: {flib}", expand=False))
                     return
                 lib_links[flib] = fpath
             elif utils.os.path.exists(path):
@@ -90,14 +97,14 @@ def r3make_build(console:Console, config: dict) -> None:
                         lib_links[lib] = path
                         break
                     else:
-                        print(f"Library Not Found: {lib}")
+                        console.print(Panel(f"Library Not Found: {flib}", expand=False))
                         return
 
     # extract source file configuration
     src_dirs = []
     for src_dir in config["src-dirs"]:
         if not utils.os.path.exists(src_dir):
-            print(f"Source Directory Not Found: {src_dir}")
+            console.print(Panel(f"Source Directory Not Found: {src_dir}", expand=False))
             continue
         src_dirs.append(src_dir)
     
@@ -109,7 +116,7 @@ def r3make_build(console:Console, config: dict) -> None:
         if utils.os.path.exists(file):
             src_files.append(utils.os_path(file))
         else:
-            print(f"unable to locate src file: {file}\n")
+            console.print(Panel(f"unable to locate src file: {file}", expand=False))
             return
         
     # extract output configuration
@@ -119,17 +126,10 @@ def r3make_build(console:Console, config: dict) -> None:
     
     out_type = config["out-type"]
     if out_type not in c_instance.out_types:
-        print(f"({c_instance.name}) Invalid Output Type: {out_type}")
+        console.print(Panel(f"({c_instance.name}) Invalid Output Type: {out_type}", expand=False))
 
     out_name = config["out-name"]
     
-    # extract r3make pre-build commands
-    if r3make_config:
-        pre_commands = r3make_config["pre-build"]
-        for command in pre_commands:
-            if command in CBUILD_COMMANDS:
-                CBUILD_COMMANDS[command](config, param=pre_commands[command])
-
     if not utils.os.path.exists(f"{config["out-dir"]}{utils.SEP}ofiles"):
         try:
             utils.os.mkdir(f"{config["out-dir"]}{utils.SEP}ofiles")
