@@ -135,7 +135,7 @@ This configuration will:
 1. Compile `main.c` and `utils.c` into object files.
 2. Link them into an executable called `MyProject.exe` in the `bin` directory.
 
-Notice that there are two targets within this configuration, the tests target can be built using the following command: `r3make tests`
+Notice that there are two targets within this configuration, the tests target can be built using the following command: `r3make tests`  
 The `tests` target makes use of the `buildeach` r3make flag, which tells r3make to compile each of the source files for this target individually. (the output will be named after the source.)
 1. Compile `test_main.c` and `test_utils.c` into object files.
 2. Link them each into executables named `test_main.exe` and `test_utils.exe` in the `bin` directory.
