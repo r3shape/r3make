@@ -30,7 +30,7 @@ pip install r3make
 
 ### Step 1. Create a `r3make` Configuration File
 
-The `r3make` file uses JSON to specify project settings. Here's an example configuration:
+The `r3make` file uses JSON to specify project settings. Here's a blank r3make configuration in its entirety:
 
 ```json
 {
@@ -38,6 +38,7 @@ The `r3make` file uses JSON to specify project settings. Here's an example confi
     "c-targets": {
       "my_lib":{
          "r3make": {
+             "flags": [],
              "pre-build": {},
              "post-build": {}
          },
@@ -55,7 +56,7 @@ The `r3make` file uses JSON to specify project settings. Here's an example confi
 }
 ```
 
-- **(Optional) `r3make`**: Dictionary of pre and post r3make commands for this build.
+- **(Optional) `r3make`**: Dictionary of pre and post/build commands, and build flags for a target.
 - **`c-instance`**: Compiler to use (currently supported: GCC, CLANG, EMCC).
 - **`c-targets`**: Compilation targets for your project.
 - **(Optional) `c-flags`**: List of compiler flags to be used during this build.
@@ -91,6 +92,9 @@ MyProject/
 src/
    /main.c
    /utils.c
+tests/
+   /test_main.c
+   /test_utils.c
 include/
        /utils.h
 r3make
@@ -107,7 +111,20 @@ A `r3make` configuration would look like this:
          "out-dir": "bin",
          "out-type": "exe",
          "out-name": "MyProject"
-      }
+      },
+      "tests": {
+         "r3make": {
+             "flags": ["buildeach"],
+             "post-build": {
+                 "nofiles": null
+             }
+         },
+         "src-dirs": ["tests"],
+         "inc-dirs": ["include"],
+         "out-type": "exe",
+         "out-name": null,
+         "out-dir": "bin"
+        }
    }
 }
 ```
@@ -117,6 +134,11 @@ You would then run the following command: `r3make MyProject`
 This configuration will:
 1. Compile `main.c` and `utils.c` into object files.
 2. Link them into an executable called `MyProject.exe` in the `bin` directory.
+
+Notice that there are two targets within this configuration, the tests target can be built using the following command: `r3make tests`
+The `tests` target makes use of the `buildeach` r3make flag, which tells r3make to compile each of the source files for this target individually. (the output will be named after the source.)
+1. Compile `test_main.c` and `test_utils.c` into object files.
+2. Link them each into executables named `test_main.exe` and `test_utils.exe` in the `bin` directory.
 
 >Note: r3make will create and store object files at `config[out-dir]\\ofiles`. This directory can be safely removed after a build has completed either manually or with the `nofiles` post-build command.
 
