@@ -11,8 +11,10 @@ r3make is a straightforward command-line build tool for C projects. It simplifie
 - **Simple JSON Configuration**: Define project settings in a JSON-based `.r3make` file.
 - **Compiler Support**: Currently supports MinGW GCC, Emscripten, Clang, and MSVC.
 - **Automatic Source Management**: Collects `.c` files from specified directories for compilation.
-- **Flexible Target Output**: Build executables (`.exe`), shared libraries (`.dll`/`.so`/`.dylib`), and soon static libraries (`.a`/`.lib`).
+- **Flexible Target Output**: Build executables (`.exe`), shared libraries (`.dll`/`.so`/`.dylib`), and static libraries (`.a`/`.lib`).
 - **Cross-Platform Design**: While currently built and maintained on Windows, future updates aim to support Linux and MacOS.
+
+- **Remote Dependencies** Automate your builds and other developer's by setting up your repository's `.r3make` directory, and leveraging the `gitdeps` pre build command. (Scroll down for more info on `remote dependencies`.)
 
 <br>
 
@@ -144,7 +146,7 @@ The `tests` target makes use of the `buildeach` r3make flag, which tells r3make 
 
 <br>
 
-## Automating Dependency Fetching With r3make
+## Remote Dependencies With r3make
 > Note: Any dependency left with a path value of `null` in the configuration will be searched for (recursively) in the current working directory, then OS specific library locations, and finally the default search locations of your selected compiler instance. (System libraries like opengl32 dont require a path to be specified.)
 
 r3make supports a configuration field named after the tool `r3make`. This field is used to invoke r3make `pre-build` and `post-build` commands, thus these are the field names of the `r3make` fields.
