@@ -14,7 +14,7 @@ r3make is a straightforward command-line build tool for C projects. It simplifie
 - **Flexible Target Output**: Build executables (`.exe`), shared libraries (`.dll`/`.so`/`.dylib`), and static libraries (`.a`/`.lib`).
 - **Cross-Platform Design**: While currently built and maintained on Windows, future updates aim to support Linux and MacOS.
 
-- **Remote Dependencies** Automate your builds and other developer's by setting up your repository's `.r3make` directory, and leveraging the `gitdeps` pre build command. (Scroll down for more info on `remote dependencies`.)
+- **Remote Dependencies:** Automate your builds and other developer's by setting up your repository's `.r3make` directory, and leveraging the `gitdeps` pre build command. (Scroll down for more info on `remote dependencies`.)
 
 <br>
 
@@ -170,7 +170,7 @@ As you can see, r3make commands may be passed parameters of different types, so 
 > Note: all r3make commands take both the calling configuration along with the value attached to the command field.
 
 ### How does this help further automate a build?
-Well r3make has the ability to clone and build dependencies from Github, and making a project available to the CLI is as simple as the following:
+r3make has the ability to clone and build dependencies from Github, and making a project available to the CLI is as simple as the following:
 
 In the root of your project's repository, create a directory named `.r3make`.
 
