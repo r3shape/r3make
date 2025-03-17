@@ -2,7 +2,7 @@
 ![PyPi Package version](https://img.shields.io/pypi/v/r3make?style=for-the-badge&logo=pypi&logoColor=white&label=r3make&labelColor=black&color=white&link=https%3A%2F%2Fpypi.org%2Fproject%2Fr3make%2F2025.0.2%2F
 )
 
-r3make is a straightforward command-line build tool for C projects. It simplifies the compilation process without the complexity of tools like CMake, making it perfect for small to medium-sized projects with minimal dependencies.
+r3make is a straightforward command-line build tool for C projects. It simplifies the compilation process with less complexity and more readibility, making it perfect for small to medium-sized projects with minimal dependencies.
 
 <br>
 
@@ -215,7 +215,7 @@ Now your all set, and ready to build!
 
 ## Why r3make?
 
-While tools like CMake are powerful, they can be overly complex for straightforward tasks. r3make focuses on simplicity and ease of use, letting you focus on writing code rather than managing build configurations.
+While tools like CMake are powerful, they can be overly complex for straightforward tasks, and Makefiles tend to be 'not so readable'. r3make focuses on simplicity and ease of use, letting you get back to writing code rather than managing build configurations.
 
 <br>
 
@@ -236,7 +236,14 @@ While tools like CMake are powerful, they can be overly complex for straightforw
 
 <br>
 
-## Contributing
+## r3make Contributors
+
+
+<a href="https://github.com/r3shape/r3make/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=r3shape/r3make&max=500&columns=20&anon=1" />
+</a>
+
+<br>
 
 Contributions are welcome! If you encounter issues or have feature suggestions, feel free to open an issue or submit a pull request on GitHub.
 
