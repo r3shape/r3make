@@ -51,6 +51,9 @@ class BaseCompiler:
             else:
                 command = f"{self.prefix} -shared {ofile_str} {lib_str} {lib_dir_str} -o {out_dir}{utils.SEP}{out_name}{out_ext}"
 
+        elif out_type in ["a", "lib"]:
+            command = f"ar rcs {out_dir}{utils.SEP}{out_name}{out_ext} {ofile_str}"
+
         elif out_type == "exe":
             command = f"{self.prefix} {ofile_str} {lib_str} {lib_dir_str} -o {out_dir}{utils.SEP}{out_name}{out_ext}"
 

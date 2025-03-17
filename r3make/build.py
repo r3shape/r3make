@@ -96,9 +96,9 @@ def r3make_build(console:Console, config: dict) -> None:
                     if f"{path}{utils.SEP}{lib}{ext}" in fetch_files(ext, path):
                         lib_links[lib] = path
                         break
-                    else:
-                        console.print(Panel(f"Library Not Found: {flib}", expand=False))
-                        return
+        if lib not in list(lib_links.keys()):
+            console.print(Panel(f"Library Not Found: {lib}", expand=False))
+            return
 
     # extract source file configuration
     src_dirs = []
