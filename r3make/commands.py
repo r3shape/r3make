@@ -30,7 +30,7 @@ def _gitdeps_command(config:dict, param=None) -> None:
                 utils.os.kill(utils.os.getpid(), utils.signal.SIGBREAK)
 
             # extract output info to verify the desired build artifact was generated
-            with open(f"r3make", "rb") as f:
+            with open(f"{path}{utils.SEP}{dep_name}{utils.SEP}.r3make{utils.SEP}r3make", "rb") as f:
                 config = utils.json.load(f)
                 f.close()
 
@@ -63,7 +63,7 @@ def _gitdeps_command(config:dict, param=None) -> None:
                 utils.os.system(f"r3make {dep_name}")
                 
                 for r, d, f in utils.os.walk(f"{path}{utils.SEP}{dep_name}"):
-                    if utils.os_path(r).endswith(utils.os_path(out_dir)):
+                    if utils.os_path(r).endswith(utils.os_path(out_dir).replace("/","").replace("\\","").replace("..","")):
                         utils.os.chdir(f"{utils.os_path(r)}")
                         break
             
