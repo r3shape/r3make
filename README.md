@@ -240,7 +240,7 @@ While tools like CMake are powerful, they can be overly complex for straightforw
 
 
 <a href="https://github.com/r3shape/r3make/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=r3shape/r3make&max=500&columns=20&anon=1" />
+  <img src="https://contrib.rocks/image?repo=r3shape/r3make" />
 </a>
 
 <br>
