@@ -1,6 +1,11 @@
+import os
 import json
 import glob
+import signal
 import shutil
+import platform
+import subprocess
+from pathlib import Path
 
 COLOR = {
     "info": "\033[94m",
@@ -22,6 +27,7 @@ def detect_compiler():
     exit(1)
 
 def load_config(path):
+    path = os_path(path)
     try:
         with open(path, 'r') as f:
             return json.load(f)
@@ -32,8 +38,11 @@ def load_config(path):
         log(f"Config file '{path}' is not valid JSON.", "error")
         exit(1)
 
+def os_path(path) -> str:
+    return path.replace("/", os.sep).replace("\\", os.sep)
+
 def expand_files(files, ext):
     expanded = []
     for pattern in files:
         expanded += glob.glob(pattern, recursive=True)
-    return [file for file in expanded if file.endswith(ext)]
+    return [os_path(file) for file in expanded if file.endswith(ext)]
