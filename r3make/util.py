@@ -26,11 +26,11 @@ def detect_compiler():
     log("No supported compiler found in PATH.", "error")
     exit(1)
 
-def load_config(path):
+def load_config(target, path):
     path = os_path(path)
     try:
         with open(path, 'r') as f:
-            return json.load(f)
+            return json.load(f).get(target, None)
     except FileNotFoundError:
         log(f"Config file '{path}' not found.", "error")
         exit(1)
