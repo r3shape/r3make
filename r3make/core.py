@@ -7,7 +7,7 @@ from r3make.util import detect_compiler, os_path, expand_files, log
 
 def build_project(cfg, target, run=False, verbose=False, clean_obj=False, build_each=False):
     if verbose: log(f"r3make {YEAR}.{MINOR}.{PATCH} | python {sys.version}")
-    print(run)
+
     compiler = detect_compiler()
     flags = cfg.get("flags", [])
     defines = cfg.get("defines", [])
