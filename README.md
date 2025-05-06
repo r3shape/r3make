@@ -106,7 +106,6 @@ CMake and Make are powerful but overly complex for many use cases. `r3make` give
 
 * [ ] Incremental builds (skip unchanged files).
 * [ ] Parallel compilation.
-* [ ] Verbose mode (`--verbose`).
 * [ ] Better error messages and diagnostics.
 * [ ] Linux/macOS support.
 * [ ] Remote dependency fetching (planned).
