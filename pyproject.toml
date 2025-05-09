@@ -1,0 +1,16 @@
+[project]
+name = "r3make"
+version = "2025.2.0"
+description = "Simple JSON-based CLI build tool for C!!!"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [{ name = "r3shape" }]
+keywords = ["cli", "c", "build", "compiler", "json", "tool"]
+
+[project.scripts]
+r3make = "r3make.cli:main"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
