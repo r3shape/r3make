@@ -55,6 +55,10 @@ To run an executable immediately after building:
 ```bash
 r3make --target MyApp --run
 ```
+| <b>NOTE:  
+| If the `name` field is not present in a r3make target, the target name is used.  
+| r3make configuration files may have a target named "main", this is the default target when calling `r3make` with no `--target` flag. </b>
+
 ---
 
 ## Target Configuration Fields
@@ -64,6 +68,7 @@ r3make --target MyApp --run
 | `sources`   | Yes      | List of glob patterns or file paths to `.c` files. |
 | `type`      | Yes      | `exe`, `dll`, or `lib` (shared/static libraries).  |
 | `dest`      | Yes      | Output directory for built files.                  |
+| `name`      | No       | The name of the output artifact.                   |
 | `flags`     | No       | Additional compiler flags.                         |
 | `defines`   | No       | List of preprocessor defines.                      |
 | `gitdeps`   | No       | List of remote linked libraries.                   |
