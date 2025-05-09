@@ -31,7 +31,9 @@ A minimal example utilizing all config fields:
 
         "includes": ["include"],
         "sources": ["src/*.c"],
-        "libraries": {"gdi32": null},
+        
+        "libraries": {"gdi32": null, "SSDK": null},
+        "gitdeps": ["r3shape/SSDK"],
 
         "name": "App",
         "type": "exe",
@@ -60,12 +62,13 @@ r3make --target MyApp --run
 | Field       | Required | Description                                        |
 | ----------- | -------- | -------------------------------------------------- |
 | `sources`   | Yes      | List of glob patterns or file paths to `.c` files. |
-| `includes`  | No       | List of include directories.                       |
-| `defines`   | No       | List of preprocessor defines.                      |
-| `flags`     | No       | Additional compiler flags.                         |
-| `libraries` | No       | Linked libraries, optionally with paths.           |
 | `type`      | Yes      | `exe`, `dll`, or `lib` (shared/static libraries).  |
 | `dest`      | Yes      | Output directory for built files.                  |
+| `flags`     | No       | Additional compiler flags.                         |
+| `defines`   | No       | List of preprocessor defines.                      |
+| `gitdeps`   | No       | List of remote linked libraries.                   |
+| `includes`  | No       | List of include directories.                       |
+| `libraries` | No       | Linked libraries, optionally with paths.           |
 
 ---
 
@@ -108,7 +111,7 @@ CMake and Make are powerful but overly complex for many use cases. `r3make` give
 * [ ] Parallel compilation.
 * [ ] Better error messages and diagnostics.
 * [ ] Linux/macOS support.
-* [ ] Remote dependency fetching (planned).
+* [✔️] Remote dependency fetching (`gitdeps` config field).
 
 ---
 
