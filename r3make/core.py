@@ -5,7 +5,7 @@ from pathlib import Path
 from r3make.version import YEAR, MINOR, PATCH
 from r3make.util import detect_compiler, os_path, expand_files, log
 
-def build_project(cfg, target, run=False, verbose=False, clean_obj=False, build_each=False):
+def build_project(cfg, target, run=False, verbose=False, nofiles=False, buildeach=False):
     if verbose: log(f"r3make {YEAR}.{MINOR}.{PATCH} | python {sys.version}")
 
     compiler = detect_compiler()
@@ -41,7 +41,7 @@ def build_project(cfg, target, run=False, verbose=False, clean_obj=False, build_
         if path:
             link_flags.append(f"-L{os_path(path)}")
 
-    if build_each:
+    if buildeach:
         for src in sources:
             base = Path(src).stem
             obj = os.path.join(dest, base + ".o")
@@ -80,7 +80,7 @@ def build_project(cfg, target, run=False, verbose=False, clean_obj=False, build_
             elif run == True and type != "exe":
                 log(f"--run is only supported for 'exe' targets.", "warning")
 
-            if clean_obj:
+            if nofiles:
                 try:
                     os.remove(obj)
                     log(f"Removed {obj}", "info")
@@ -124,7 +124,7 @@ def build_project(cfg, target, run=False, verbose=False, clean_obj=False, build_
         elif run == True and type != "exe":
             log(f"--run is only supported for 'exe' targets.", "warning")
 
-        if clean_obj:
+        if nofiles:
             for obj in obj_files:
                 try:
                     os.remove(obj)

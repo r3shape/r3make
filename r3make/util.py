@@ -27,16 +27,22 @@ def detect_compiler():
     exit(1)
 
 def load_config(target, path):
+    cfg = None
     path = os_path(path)
     try:
         with open(path, 'r') as f:
-            return json.load(f).get(target, None)
+            c = json.load(f)
+        
+        cfg = c.get(target, None)
+        if cfg == None:
+            cfg = c.get("main", None)
     except FileNotFoundError:
         log(f"Config file '{path}' not found.", "error")
         exit(1)
     except json.JSONDecodeError:
         log(f"Config file '{path}' is not valid JSON.", "error")
         exit(1)
+    return cfg
 
 def os_path(path) -> str:
     return path.replace("/", os.sep).replace("\\", os.sep)

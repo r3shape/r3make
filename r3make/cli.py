@@ -1,4 +1,5 @@
 import argparse
+from r3make.gitdeps import gitdeps
 from r3make.core import build_project
 from r3make.util import log, load_config
 
@@ -37,16 +38,17 @@ def main():
 
     args = parser.parse_args()
     config = load_config(args.target, args.file)
-    
+
     if config:
+        gitdeps(args.target, config, verbose=args.verbose)
         build_project(
-            config,
-            args.target,
+            cfg=config,
+            target=args.target,
             run=args.run,
             verbose=args.verbose,
-            clean_obj=args.nofiles,
-            build_each=args.buildeach
+            nofiles=args.nofiles,
+            buildeach=args.buildeach,
         )
     else:
-        log(f"Failed to load config: {args.target} {args.file}", "error")
-
+        log(f"Failed to load config: {args.target} {args.file}")
+        exit(1)
