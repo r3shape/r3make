@@ -114,7 +114,6 @@ You should see a log similar to `[INFO] Added library 'SSDK' from r3shape/SSDK` 
 
 | <b>NOTE:</b>  
 | A [WARNING] log might appear when utilizing the `gitdeps` field, as an <b>elevated shell</b> is required for OS-default path manipulation, which is where remote deps are installed to.
-| 
 
 ---
 
