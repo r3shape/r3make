@@ -17,6 +17,17 @@
 
 ---
 
+## Why r3make?
+
+Makefile and CMake are powerful but overly complex for many use cases. `r3make` gives you:
+
+* A single clean JSON file.
+* No scripts or Makefile DSL.
+* Easier cross-compilation setup.
+* Simpler onboarding for contributors.
+
+---
+
 ## Getting Started
 
 ### 1. Create a `r3make.json` file in your project root
@@ -61,6 +72,52 @@ r3make --target MyApp --run
 
 ---
 
+## Fetching Remote Libraries
+Consider the following program:
+
+```c
+#include <include/SSDK/SSDK.h>
+
+int main() {
+    ssdkInitLog();
+    saneLog->log(SANE_LOG_DUMP, "Hello, World!");
+    ssdkExitLog();
+    return 0;
+}
+```
+
+The above code is using the [SSDK](https://github.com/r3shape/SSDK) library, but we have not installed [SSDK](https://github.com/r3shape/SSDK) ourselves.
+We can let `r3make` take care of installation, updates, and linking with [SSDK](https://github.com/r3shape/SSDK) via our configuration:
+
+```json
+{
+    "main": {
+        "sources": ["main.c"],
+        
+        "libraries": {"SSDK": null},
+        "gitdeps": ["r3shape/SSDK"],
+        
+        "name": "app",
+        "type": "exe",
+        "dest": "build"
+    }
+}
+```
+
+With the above configuration, we can use the following command to build, link, and run `app.exe`:
+
+```bash
+r3make -r
+```
+
+You should see a log similar to `[INFO] Added library 'SSDK' from r3shape/SSDK` in the stream of output from `r3make`, verifying the successful clone/update, and build of the remote dep.
+
+| <b>NOTE:</b>  
+| A [WARNING] log might appear when utilizing the `gitdeps` field, as an <b>elevated shell</b> is required for OS-default path manipulation, which is where remote deps are installed to.
+| 
+
+---
+
 ## Target Configuration Fields
 
 | Field       | Required | Description                                        |
@@ -96,17 +153,6 @@ Install via pip:
 ```bash
 pip install r3make
 ```
-
----
-
-## Why r3make?
-
-CMake and Make are powerful but overly complex for many use cases. `r3make` gives you:
-
-* A single clean JSON file.
-* No scripts or Makefile DSL.
-* Easier cross-compilation setup.
-* Simpler onboarding for contributors.
 
 ---
 
