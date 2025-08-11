@@ -1,21 +1,19 @@
-import os, sys
-import subprocess
-import platform
-from pathlib import Path
-from r3make.version import YEAR, MINOR, PATCH
-from r3make.util import detect_compiler, os_path, expand_files, log
+import sys
 
-def build_project(cfg, target, run=False, verbose=False, nofiles=False, buildeach=False):
+from r3make.version import YEAR, MINOR, PATCH
+from r3make.util import detect_compiler, os_path, expand_files, log, os, subprocess, Path, platform
+
+def build_project(main_config, target, run=False, verbose=False, nofiles=False, buildeach=False, clangdcmd=False):
     if verbose: log(f"r3make {YEAR}.{MINOR}.{PATCH} | python {sys.version}")
 
     compiler = detect_compiler()
-    flags = cfg.get("flags", [])
-    defines = cfg.get("defines", [])
-    includes = cfg.get("includes", [])
-    sources = expand_files(cfg.get("sources", []), ".c")
-    type = cfg.get("type", "exe")
-    dest = os_path(cfg.get("dest", "build"))
-    libraries = cfg.get("libraries", {})
+    flags = main_config.get("flags", [])
+    defines = main_config.get("defines", [])
+    includes = main_config.get("includes", [])
+    sources = expand_files(main_config.get("sources", []), ".c")
+    type = main_config.get("type", "exe")
+    dest = os_path(main_config.get("dest", "build"))
+    libraries = main_config.get("libraries", {})
     
     if not sources:
         log("No source files found!", "error")
@@ -104,7 +102,7 @@ def build_project(cfg, target, run=False, verbose=False, nofiles=False, buildeac
                 exit(1)
             obj_files.append(obj)
 
-        name = cfg.get("name", target)
+        name = main_config.get("name", target)
         output = os.path.join(dest, name + ext)
         link_cmd = f"{compiler} {' '.join(obj_files)} {' '.join(link_flags)} -o {output}" if type == "exe" else \
                    f"{compiler} -shared {' '.join(obj_files)} {' '.join(link_flags)} -o {output}" if type == "dll" else \

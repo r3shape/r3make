@@ -138,7 +138,7 @@ You should see a log similar to `[INFO] Added library 'SSDK' from r3shape/SSDK` 
 | ---------- | ------------- | --------------------------------------------------------------------------- |
 | `-t`       | `--target`    | Name of the target to build (e.g., `-t MyApp`). Required unless defaulting. |
 | `-v`       | `--verbose`   | Enables verbose output (shows full commands and file list).                 |
-| `-f`       | `--file`      | Path to the `r3make.json` config file (defaults to `r3make.json` in current dir).   |
+| `-ccmd`    | `--clangCmd`  | Generates a `compile_commands.json` file for the `clangd` LSP.              |
 | `-nf`      | `--nofiles`   | Disables file discovery; skips glob expansion (useful for debugging).       |
 | `-be`      | `--buildeach` | Forces compilation of all sources individually, even if a library.          |
 | `-r`       | `--run`       | Runs the target after a successful build (only works for `exe` targets).    |
