@@ -102,6 +102,9 @@ def build_project(main_config, target, run=False, verbose=False, nofiles=False, 
                 exit(1)
             obj_files.append(obj)
 
+        if type == "lib":
+            output = f"lib{output}"
+
         name = main_config.get("name", target)
         output = os.path.join(dest, name + ext)
         link_cmd = f"{compiler} {' '.join(obj_files)} {' '.join(link_flags)} -o {output}" if type == "exe" else \
