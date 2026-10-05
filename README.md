@@ -22,7 +22,8 @@ It is designed for projects that want a simple build system without the configur
 | Short | Long        | Description                          |
 | ----- | ----------- | ------------------------------------ |
 | `-t`  | `--target`  | Target to build. Defaults to `main`. |
-| `-v`  | `--verbose` | Enable verbose build output.         |
+| `-v`  | `--version` | Output the installed r3make version. |
+| `-vb` | `--verbose` | Enable verbose build output.         |
 | `-m`  | `--multi`   | Build each source as a separate artifact. |
 | `-c`  | `--clean`   | Clean mode.                          |
 | `-r`  | `--run`     | Run mode.                            |
