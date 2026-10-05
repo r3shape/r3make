@@ -49,6 +49,7 @@ class R3Make:
     DUMP: int = 1 << 3
     RUN: int = 1 << 4
 
+    VERSION: str = "2026.1.0"
     HOME_DIR: str = os.path.expanduser("~")
     GHREPO_DIR: str = os.path.join(HOME_DIR, "r3make", "deps", "github", "user", "repo")
 
@@ -252,7 +253,7 @@ class R3Make:
             cmd = [*base, "-c", src, "-o", obj]
 
             if self.verbose: 
-                self.log(f"compiling: {src} | {cmd}", "info")
+                self.log(f"compiling: {" ".join(cmd)}", "info")
             
             if self.dump:
                 dump = {
@@ -274,15 +275,15 @@ class R3Make:
         match target.type:
             case "lib"|"static": 
                 cmd = ["ar", "rcs", out, *target.objs]
-                if self.verbose: self.log(f"linking: {cmd}", "info")
+                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
                 return subprocess.call(cmd) == 0
             case "exe"|"executable":
                 cmd = [comp, *target.objs, *target.getLDFlags(), "-o", out]
-                if self.verbose: self.log(f"linking: {cmd}", "info")
+                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
                 return subprocess.call(cmd) == 0
             case "so"|"dll"|"shared"|"dynamic":
                 cmd = [comp, "-shared", *target.objs, *target.getLDFlags(), "-o", out]
-                if self.verbose: self.log(f"linking: {cmd}", "info")
+                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
                 return subprocess.call(cmd) == 0
     
     def build(self, t: str="main") -> R3BuildTarget|None:
@@ -379,9 +380,14 @@ class R3Make:
         self.newArg("dump", "d", empty=True)
         self.newArg("multi", "m", empty=True)
         self.newArg("clean", "c", empty=True)
-        self.newArg("verbose", "v", empty=True)
-
+        self.newArg("version", "v", empty=True)
+        self.newArg("verbose", "vb", empty=True)
         args = self.parser.parse_args()
+
+        if args.version:
+            self.log(f"version: {self.VERSION}", "info")
+            return
+
         if args.verbose: self.mask |= self.VERBOSE
         if args.multi: self.mask |= self.MULTI
         if args.clean: self.mask |= self.CLEAN
