@@ -1,7 +1,7 @@
-venv/
 dist/
-TODO
-*.bat
-setup.py
+venv/
+build/
+*.spec
+.local/
 *.egg-info/
 __pycache__/
