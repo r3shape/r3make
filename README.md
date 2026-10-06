@@ -1,482 +1,379 @@
 # r3make
+**r3make** is a minimal, JSON-based build tool for C projects.  
+Build targets, compiler options, dependencies, include paths, output locations, and project relationships are defined in a single `r3make.json` file.
 
-**r3make** is a minimal, JSON-based build tool for C projects.
+## Table of Contents
 
-It is designed for projects that want a simple build system without the configuration overhead of tools such as CMake. Build targets, compiler options, dependencies, include paths, and output locations are described in a single `r3make.json` file.
+- [r3make](#r3make)
+  - [Table of Contents](#table-of-contents)
+  - [Features](#features)
+  - [Command Line Options](#command-line-options)
+  - [Configuration](#configuration)
+    - [Project Fields](#project-fields)
+  - [Target Configuration](#target-configuration)
+    - [Target Types](#target-types)
+  - [References](#references)
+    - [Requirements](#requirements)
+    - [Dependencies](#dependencies)
+  - [Project Registry](#project-registry)
+  - [Local Dependencies](#local-dependencies)
+  - [GitHub Dependencies](#github-dependencies)
+  - [Compiler Flags](#compiler-flags)
+  - [Includes and Defines](#includes-and-defines)
+  - [Multi Mode](#multi-mode)
+  - [Clean Mode](#clean-mode)
+  - [Run Mode](#run-mode)
+  - [Compile Commands](#compile-commands)
+  - [Compiler Detection](#compiler-detection)
+  - [Example Project](#example-project)
+  - [Design](#design)
+  - [Installation](#installation)
+  - [Roadmap](#roadmap)
+  - [Contributing](#contributing)
+  - [License](#license)
+
 
 ## Features
 
-* **Simple JSON configuration** — Define your entire build in one readable JSON file.
-* **Multiple targets** — Build executables, shared libraries, and static libraries from the same configuration.
-* **Target dependencies** — Targets can require other targets in the same project.
-* **GitHub dependencies** — Dependencies can be pulled directly from GitHub and built using their own `r3make.json`.
-* **Recursive dependencies** — GitHub dependencies can have their own dependencies.
-* **Dependency caching** — Cloned repositories and built artifacts are reused instead of being downloaded and rebuilt unnecessarily.
-* **GCC, Clang, and MSVC** — r3make automatically detects an available compiler.
-* **Cross-platform design** — Windows is currently supported, with additional platform support planned.
-* **Small and readable** — No build-language DSL or generated project files are required.
-
+* **Simple JSON configuration** — Define a project using one configuration file.
+* **Multiple targets** — Build executables, shared libraries, and static libraries.
+* **Target references** — Aggregate configuration from intra-project and inter-project targets using `@target` and `@project::target`.
+* **Target requirements** — Build required targets automatically.
+* **Local dependencies** — Link against libraries using explicit paths.
+* **Remote dependencies** — Clone and build GitHub repositories containing `r3make.json`.
+* **Recursive dependencies** — Dependencies can have their own dependencies.
+* **Project storage** — Register, list, remove, and rename projects for cross-project references.
+* **Dependency caching** — Reuse cloned GitHub repositories and their build artifacts.
+* **GCC, Clang, and MSVC** — Automatically detect an available compiler.
 
 ## Command Line Options
 
-| Short | Long        | Description                          |
-| ----- | ----------- | ------------------------------------ |
-| `-t`  | `--target`  | Target to build. Defaults to `main`. |
-| `-v`  | `--version` | Output the installed r3make version. |
-| `-vb` | `--verbose` | Enable verbose build output.         |
-| `-m`  | `--multi`   | Build each source as a separate artifact. |
-| `-c`  | `--clean`   | Clean mode.                          |
-| `-r`  | `--run`     | Run mode.                            |
-| `-d`  | `--dump`    | Dump mode.                           |
+| Short  | Long        | Description                                              |
+| ------ | ----------- | -------------------------------------------------------- |
+| `-t`   | `--target`  | Target to build. Defaults to `main`.                     |
+| `-s`   | `--store`   | Store the current project for cross-project references.  |
+| `-ls`  | `--list`    | List stored projects and their targets.                  |
+| `-rem` | `--remove`  | Remove a project from the project registry.              |
+| `-ren` | `--rename`  | Rename a stored project. Requires the old and new names. |
+| `-v`   | `--version` | Output the installed r3make version.                     |
+| `-vb`  | `--verbose` | Enable verbose build output.                             |
+| `-m`   | `--multi`   | Build each source as a separate artifact.                |
+| `-c`   | `--clean`   | Remove object files after building.                      |
+| `-r`   | `--run`     | Run the resulting executable.                            |
+| `-d`   | `--dump`    | Generate/update `compile_commands.json`.                 |
 
 For example:
 
 ```bash
-r3make -t app
+r3make -t test -vb
 ```
 
-or:
+## Configuration
 
-```bash
-r3make --target app --verbose
-```
-
-## Why r3make?
-
-C projects do not always need a large build system.
-
-For smaller projects, a build configuration can often be expressed as a few paths, compiler options, and dependencies. r3make keeps those things explicit without requiring a separate build language.
-
-A typical project consists of:
-
-```text
-include/
-src/
-bin/
-```
-
-Thus a monolithic, hyper configurable build system might be overkill.
-
-
-## Getting Started
-
-Create a `r3make.json` file in the root of your project:
+A minimal `r3make.json` looks like:
 
 ```json
 {
+    "project": "project1",
     "main": {
         "type": "exe",
-        "name": "app",
+        "name": "project1",
         "dest": "bin",
-        "ccflags": ["std=c99", "Wall", "Werror"],
-        "defines": ["APP_BUILD"],
-        "includes": ["include"],
         "sources": ["src/*.c"]
     }
 }
 ```
 
-Then run:
+The `main` target is used when no target is specified.
 
-```bash
-r3make
-```
+### Project Fields
 
-The target named `main` is the default target when no target is specified.
+| Field     | Description                                                 |
+| --------- | ----------------------------------------------------------- |
+| `project` | Project name used by `-s` and cross-project references.     |
+| `root`    | Root directory for project-relative paths. Defaults to `.`. |
+| `all`     | Targets built when `-t all` is used.                        |
 
-You can explicitly select a target with:
-
-```bash
-r3make -t main
-```
-
-## Project Configuration
-
-A `r3make.json` can define top-level fields that apply to the project as a whole:
-
-| Field  | Required | Description                                          |
-| ------ | -------- | ---------------------------------------------------- |
-| `root` | No       | Root directory of the project. Defaults to `.`.      |
-| `all`  | No       | List of targets to build when `-t all` is specified. |
-
-For example:
+Example:
 
 ```json
 {
+    "project": "project1",
     "root": ".",
-    "all": ["main", "test"],
-
-    "main": {
-        "type": "dll",
-        "name": "ecx",
-        "dest": "bin",
-        "sources": ["src/ecx.c"]
-    },
-
-    "test": {
-        "type": "exe",
-        "name": "test",
-        "dest": "bin",
-        "sources": ["src/test.c"],
-    }
+    "all": ["main", "test"]
 }
 ```
-| Note: targets listed in `all` should be 'final' targets, meaning if they provide a `requires` field with targets that are also listed in `all`, those targets will be built twice.
 
-`root` determines the directory from which project paths are resolved. This is particularly useful for projects whose build configuration is stored separately from their source tree.
-
-`all` defines the project's final targets. Running:
+Run all configured targets with:
 
 ```bash
 r3make -t all
 ```
 
-builds each target listed in `all`, with any targets required by them being built automatically.
+## Target Configuration
+
+Targets are defined as objects in `r3make.json`.
+
+| Field      | Required | Description                                 |
+| ---------- | -------- | ------------------------------------------- |
+| `type`     | Yes      | Target type.                                |
+| `name`     | No       | Artifact name. Defaults to the target name. |
+| `dest`     | Yes      | Output directory.                           |
+| `sources`  | Yes      | Source files or glob patterns.              |
+| `includes` | No       | Include directories.                        |
+| `ccflags`  | No       | Compiler flags.                             |
+| `ldflags`  | No       | Linker flags.                               |
+| `defines`  | No       | Preprocessor definitions.                   |
+| `requires` | No       | Targets that must be built first.           |
+| `deps`     | No       | Libraries or other link dependencies.       |
 
 ### Target Types
 
-r3make supports three primary target types:
+| Type                             | Artifact       |
+| -------------------------------- | -------------- |
+| `exe`, `executable`              | Executable     |
+| `so`, `dll`, `shared`, `dynamic` | Shared library |
+| `lib`, `static`                  | Static library |
 
-| Type  | Output                                                       |
-| ----- | ------------------------------------------------------------ |
-| `exe`, `executable` | Executable                                                   |
-| `so`, `shared` | Shared library (`.dll` on Windows, `.so` on other platforms) |
-| `lib`, `static` | Static library (`.lib` on Windows, `.a` on other platforms)  |
+Artifact extensions are platform-dependent. Windows uses `.exe`, `.dll`, and `.lib`; other platforms use `.so`, `.a`, and no executable extension.
 
-The target's `name` determines the name of the generated artifact.
+## References
 
-If `name` is omitted, the target name will be used as the artifact name.
+r3make uses `@` to reference another target and aggregate its configuration data into the referencing target.
 
-## Target Configuration
+There are two forms:
 
-A target can contain the following fields:
+```text
+@target
+@project::target
+```
 
-| Field      | Required | Description                                                       |
-| ---------- | -------- | ----------------------------------------------------------------- |
-| `type`     | Yes      | Target type: `exe`, `dll`, or `lib`.                              |
-| `dest`     | Yes      | Directory where the target is built.                              |
-| `name`     | No       | Name of the generated artifact.                                   |
-| `sources`  | Yes      | Source files or glob patterns.                                    |
-| `includes` | No       | Include directories.                                              |
-| `ccflags`  | No       | Compiler flags.                                                   |
-| `ldflags`  | No       | Linker flags.                                                     |
-| `defines`  | No       | Preprocessor definitions.                                         |
-| `requires` | No       | Other targets in the same `r3make.json` that must be built first. |
-| `deps`     | No       | External libraries or GitHub dependencies.                        |
+`@target` references a target in the current project.
+
+`@project::target` references a target in another project registered with r3make.
+
+References can be used by fields that accept target configuration, such as `ccflags`, `ldflags`, `includes`, `dest`, and `deps`.
 
 For example:
 
 ```json
 {
     "main": {
-        "type": "exe",
-        "name": "app",
+        "type": "dll",
         "dest": "bin",
-        "ccflags": ["std=c99", "Wall", "Werror"],
-        "defines": ["APP_BUILD"],
-        "includes": ["include"],
-        "sources": ["src/*.c"],
-        "deps": ["extern/bin:foo"]
+        "ccflags": ["std=c11"],
+        "includes": ["include"]
+    },
+    "test": {
+        "type": "exe",
+        "dest": "@main",
+        "ccflags": ["@main", "Wall"],
+        "includes": ["@main"],
+        "sources": ["test/*.c"]
     }
 }
 ```
 
-## Multiple Targets
+When a field contains `@main`, r3make recursively resolves that target's corresponding field and adds its values to the referencing target.
 
-A single `r3make.json` can define any number of targets:
+This allows target configuration to be shared without copying it.
+
+### Requirements
+
+`requires` makes a referenced target a dependency of the current target and builds it before the current target.
 
 ```json
 {
-    "library": {
-        "type": "dll",
-        "name": "mylib",
-        "dest": "bin",
-        "ccflags": ["std=c99", "O2"],
-        "includes": ["include"],
-        "sources": ["src/*.c"]
-    },
-
-    "app": {
+    "test": {
         "type": "exe",
-        "name": "app",
-        "dest": "bin",
-        "includes": ["include"],
-        "sources": ["app/*.c"],
-        "requires": ["library"]
+        "requires": ["@main"],
+        "sources": ["test/*.c"]
     }
 }
 ```
 
-Building `app` automatically builds `library` first.
+The required target's artifact and include directories become available to the referencing target. Its include directories are passed with `-I`, and its artifact is linked using `-L` and `-l`.
+
+The same mechanism works across projects:
+
+```json
+"requires": ["@project1::main"]
+```
+
+### Dependencies
+
+A target reference can also be placed directly in `deps`:
+
+```json
+{
+    "test": {
+        "type": "exe",
+        "deps": ["@project1::main"]
+    }
+}
+```
+
+r3make builds the referenced target if its artifact does not already exist, then treats it as a link dependency of the referencing target.
+
+Its artifact is added through `-L` and `-l`, and dependencies of the referenced target are resolved recursively.
+
+Use `@` by itself when you want to reuse target configuration.
+
+Use `requires` when the referenced target *must be built* and consumed by the current target.
+
+Use a target reference in `deps` when the referenced target *should be built if necessary* and consumed by the current target.
+
+## Project Registry
+
+Projects must be stored before they can be referenced from another project.
+
+Store the current project:
 
 ```bash
-r3make -t app
+r3make -s
 ```
 
-The resulting build relationship is:
+List stored projects:
+
+```bash
+r3make -ls
+```
+
+Remove a stored project:
+
+```bash
+r3make -rem project1
+```
+
+Rename a stored project:
+
+```bash
+r3make -ren project1 project2
+```
+
+`--list` displays each registered project and its available targets. Missing or invalid project entries are automatically removed from the registry.
+
+The registry is stored at:
 
 ```text
-app
-└── library
+~/r3make/projects.json
 ```
 
-This allows projects to organize their build into independent libraries and executables without requiring separate build configurations.
+Stored project metadata is kept under:
 
-## Reusing Target Configuration
+```text
+~/r3make/projects/
+```
 
-When a project contains multiple targets, r3make allows target fields to reference another target using the `@target` syntax.
-
-This is useful when multiple targets share compiler flags, include directories, output directories, or dependencies.
-
-For example:
+The project's `project` field determines its registry name:
 
 ```json
 {
-    "main": {
-        "type": "so",
-        "name": "ecx",
-        "dest": "bin",
-        "sources": ["src/ecx.c"],
-        "ccflags": ["std=c99", "O2"],
-        "deps": ["github:zafflins/zafflib"],
-        "includes": ["include", "extern/include"]
-    },
-
-    "test": {
-        "type": "exe",
-        "name": "test",
-        "dest": "@main",
-        "deps": ["@main"],
-        "requires": ["main"],
-        "ccflags": ["@main"],
-        "includes": ["@main"],
-        "sources": ["src/test.c"],
-    }
+    "project": "project1"
 }
 ```
 
-Here, `test` uses the configuration from `main` where appropriate. Notice how the `test` target does not list the `ecx` artifact in its deps, as r3make will automatically add any targets listed in the `requires` field as dependencies. The `@` syntax therefore acts as a reference to another target's corresponding field.
-
-### Fields That Can Be Reused
-
-The following fields support `@target` references:
-
-* `deps`
-* `dest`
-* `ccflags`
-* `ldflags`
-* `includes`
-
-For list fields, referencing another target appends that target's values to the current target's values rather than replacing them.
-
-For example:
-
-```json
-{
-    "main": {
-        "ccflags": ["std=c99", "O2"]
-    },
-
-    "test": {
-        "ccflags": ["@main"]
-    }
-}
-```
-
-results in `test` receiving the compiler flags defined by `main`.
-
-A target can also add its own values:
-
-```json
-{
-    "test": {
-        "ccflags": ["@main", "Wall", "Werror"]
-    }
-}
-```
-
-which combines the referenced flags with the test target's additional flags.
-
-### Fields That Must Be Defined Per Target
-
-`type`, `name`, `sources`, and `requires` are target-specific and must be defined independently.
-
-This means a test executable can reuse the build configuration of a library without accidentally becoming the same target:
-
-```json
-{
-    "main": {
-        "type": "dll",
-        "name": "ecx",
-        "sources": ["src/ecx.c"]
-    },
-
-    "test": {
-        "type": "exe",
-        "name": "test",
-        "sources": ["src/test.c"],
-        "dest": "@main"
-    }
-}
-```
-
-The result is two distinct targets:
+Cross-project references use this name:
 
 ```text
-main -> bin/ecx.dll
-test -> bin/test.exe
+@project1::main
 ```
 
-while both targets can share the same output directory and other configuration through `@main`.
+The referenced project does not need to have been built beforehand. If its artifact does not exist, r3make builds it automatically.
 
-This makes it possible to keep related targets in a single `r3make.json` without duplicating configuration.
+## Local Dependencies
 
-## Dependencies
-
-r3make supports local libraries and GitHub dependencies.
-
-### Local Libraries
-
-A dependency can specify a library directory and library name using:
+Local libraries use:
 
 ```text
-path/to:library
-```
-
-or using a tilde `~` as the path for known/system libraries:
-```text
-~:opengl32
+path/to::library
 ```
 
 For example:
-
-```json
-{
-    "main": {
-        "type": "exe",
-        "name": "app",
-        "dest": "bin",
-        "sources": ["src/*.c"],
-        "deps": ["extern/bin:foo"]
-    }
-}
-```
-
-This causes r3make to add the appropriate `-L` and `-l` options when linking.
-
-### GitHub Dependencies
-
-GitHub dependencies use:
-
-```text
-github:user/repository
-```
-
-For example:
-
-```json
-{
-    "main": {
-        "type": "exe",
-        "name": "app",
-        "dest": "bin",
-        "sources": ["src/*.c"],
-        "deps": [
-            "github:zafflins/zafflib"
-        ]
-    }
-}
-```
-
-The dependency must contain a `r3make.json` at the root of its repository.
-
-When r3make encounters a GitHub dependency, it:
-
-1. Clones the repository into r3make's dependency cache if it has not already been cloned.
-2. Reads the dependency's `r3make.json`.
-3. Builds the dependency if its artifact does not already exist.
-4. Resolves the dependency's include directory and library output.
-5. Links the dependency into the current target.
-
-Dependencies are stored in the user's r3make dependency directory:
-
-```text
-~/r3make/deps/github/user
-```
-
-This means removing a dependency's build output will cause it to be rebuilt, while removing the repository itself will cause it to be cloned again.
-
-### Recursive Dependencies
-
-GitHub dependencies are themselves r3make projects, so dependencies can depend on other dependencies.
-
-For example:
-
-```text
-application
-└── ecx
-    └── zafflib
-```
-
-If `application` declares:
 
 ```json
 "deps": [
-    "github:zafflins/ecx"
+    "extern/bin::library"
 ]
 ```
 
-and `ecx` declares:
+This produces the equivalent of:
+
+```text
+-L<project>/extern/bin
+-llibrary
+```
+
+The special `~` path can be used for libraries already available to the system linker:
 
 ```json
 "deps": [
-    "github:zafflins/zafflib"
+    "~::library"
 ]
 ```
 
-r3make automatically resolves the entire dependency chain.
+## GitHub Dependencies
 
-The application does not need to know that `ecx` depends on `zafflib`.
+GitHub repositories containing an `r3make.json` can be specified with:
+
+```text
+github::user/repository
+```
+
+For example:
+
+```json
+"deps": [
+    "github::user/project"
+]
+```
+
+r3make:
+
+1. Clones the repository if it is not already cached.
+2. Reads its `r3make.json`.
+3. Builds its `main` target if the artifact does not exist.
+4. Adds the resulting library to the current target.
+
+Repositories are cached under:
+
+```text
+~/r3make/deps/github/
+```
+
+GitHub dependencies can contain their own dependencies, allowing dependency trees to be resolved recursively.
 
 ## Compiler Flags
 
-Compiler options are specified using `ccflags`:
+Compiler flags are specified with `ccflags`:
 
 ```json
 "ccflags": [
-    "std=c99",
+    "std=c11",
     "O2",
-    "Wall",
-    "Werror"
+    "Wall"
 ]
 ```
 
-r3make automatically adds the `-` prefix when necessary, so the above becomes:
+r3make automatically adds `-` where necessary:
 
 ```text
--std=c99 -O2 -Wall -Werror
+-std=c11 -O2 -Wall
 ```
 
-Flags that already begin with `-` are preserved:
+Flags beginning with `-` are preserved.
 
-```json
-"ccflags": [
-    "-std=c99",
-    "-O2"
-]
-```
-
-Linker-specific options can be specified separately with `ldflags`:
+Linker-specific options use `ldflags`:
 
 ```json
 "ldflags": [
-    "-pthread"
+    "pthread"
 ]
 ```
 
 ## Includes and Defines
 
-Include directories are specified with `includes`:
+Include directories:
 
 ```json
 "includes": [
@@ -485,56 +382,92 @@ Include directories are specified with `includes`:
 ]
 ```
 
-Preprocessor definitions are specified with `defines`:
+become:
+
+```text
+-Iinclude
+-Iextern/include
+```
+
+Preprocessor definitions:
 
 ```json
 "defines": [
-    "MYLIB_BUILD",
-    "DEBUG"
+    "DEBUG",
+    "PROJECT_BUILD"
 ]
 ```
 
-r3make converts these into the appropriate compiler arguments.
+become:
+
+```text
+-DDEBUG -DPROJECT_BUILD
+```
 
 ## Multi Mode
 
-By default, all source files in a target are compiled into one artifact:
+Normally all source files are compiled and then linked into one artifact.
+
+With:
+
+```bash
+r3make -m
+```
+
+each source is compiled and linked separately, with the output name derived from the source filename.
+
+## Clean Mode
+
+`--clean` removes intermediate object files after a successful build:
+
+```bash
+r3make -c
+```
+
+The final artifact is retained.
+
+## Run Mode
+
+`--run` executes the resulting executable:
+
+```bash
+r3make -r
+```
+
+Only executable targets are run.
+
+## Compile Commands
+
+`--dump` generates `compile_commands.json`:
+
+```bash
+r3make -d
+```
+
+Each compilation command records the command, working directory, and source file.
+
+## Compiler Detection
+
+r3make searches for compilers in this order:
 
 ```text
-src/test.c
-src/test2.c
-      ↓
-test.o
-test2.o
-      ↓
-test.exe
+gcc
+clang
+cl
 ```
 
-With --multi, each source file is compiled and linked independently. The output name is derived from the source filename:
-```bash
-r3make --multi
-```
-
-## Installation
-
-Prebuilt Windows releases are available from the releases page.  
-The executable can be placed somewhere on your `PATH` and invoked directly:
-
-```bash
-r3make
-```
+The first available compiler is used.
 
 ## Example Project
-A simple project might look like:
+
+A typical project can be structured as:
 
 ```text
-myproject/
+project1/
+
 ├── r3make.json
 ├── include/
-│   └── app.h
 ├── src/
-│   ├── app.c
-│   └── main.c
 └── bin/
 ```
 
@@ -542,9 +475,10 @@ with:
 
 ```json
 {
+    "project": "project1",
     "main": {
         "type": "exe",
-        "name": "app",
+        "name": "project1",
         "dest": "bin",
         "ccflags": ["std=c99", "Wall", "Werror"],
         "includes": ["include"],
@@ -556,28 +490,47 @@ with:
 Running:
 
 ```bash
-r3make
+r3make -c
 ```
 
-produces:
+builds the `main` target and cleans up any generated `.o` object files producing `bin/project1.exe`.
+
+## Design
+
+r3make keeps build descriptions close to the projects they belong to.
+
+Targets can expose their configuration to other targets through references:
 
 ```text
-myproject/
-├── r3make.json
-├── include/
-├── src/
-└── bin/
-    ├── app.exe
-    ├── app.o
+@target
 ```
 
+references a target in the current project.
+
+```text
+@project::target
+```
+
+references a target in another registered project.
+
+This allows projects to share build configuration and dependencies without copying their build definitions.
+
+## Installation
+
+Prebuilt Windows releases are available from the releases page.
+
+Place the executable somewhere on your `PATH` and run:
+
+```bash
+r3make -v
+```
 
 ## Roadmap
 
-* [ ] Build hashing to detect when targets actually need rebuilding.
+* [ ] Build hashing.
 * [ ] Improved diagnostics and error reporting.
-* [ ] Additional dependency/version management.
-* [ ] Incremental builds based on source/build state.
+* [ ] Dependency/version management.
+* [ ] Incremental builds.
 * [ ] Parallel compilation.
 
 ## Contributing

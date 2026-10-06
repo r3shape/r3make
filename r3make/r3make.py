@@ -8,56 +8,32 @@ import platform
 import subprocess
 from pathlib import Path
 
-class R3BuildTarget:
-    def __init__(self, data: dict) -> None:
-        self.objs: list[str] = []
-
-        self.type: str = data.get("type")
-        self.dest: str = data.get("dest")
-        self.sources: list[str] = data.get("sources")
-
-        self.artifact: str = {
-            "dll": ".dll" if platform.system() == "Windows" else ".so",
-            "lib": ".lib" if platform.system() == "Windows" else ".a",
-            "exe": ".exe" if platform.system() == "Windows" else "",
-        }[self.type]
-
-        self.name: str = data.get("name", None)
-        self.deps: list[str] = data.get("deps", [])
-        self.ccflags: list[str] = data.get("ccflags", [])
-        self.ldflags: list[str] = data.get("ldflags", [])
-        self.defines: list[str] = data.get("defines", [])
-        self.includes: list[str] = data.get("includes", [])
-        self.requires: list[str] = data.get("requires", [])
-
-    def getCCFlags(self) -> list[str]:
-        return [f"-{flag}" if not flag.startswith('-') else flag for flag in self.ccflags]
-
-    def getLDFlags(self) -> list[str]:
-        return [f"-{flag}" if not flag.startswith('-') else flag for flag in self.ldflags]
-
-    def getIncludes(self) -> list[str]:
-        return [f"-I{path}" for path in self.includes]
-
-    def getDefines(self) -> list[str]: 
-        return [f"-D{define}" for define in self.defines]
+from r3make import target
+from r3make.project import R3Project
+from r3make.target import R3BuildTarget
+from r3make.reference import R3Reference
 
 class R3Make:
+    VERSION: str = "2026.1.1"
+
     VERBOSE: int = 1 << 0
     MULTI: int = 1 << 1
     CLEAN: int = 1 << 2
     DUMP: int = 1 << 3
     RUN: int = 1 << 4
 
-    VERSION: str = "2026.1.0"
     HOME_DIR: str = os.path.expanduser("~")
-    GHREPO_DIR: str = os.path.join(HOME_DIR, "r3make", "deps", "github", "user", "repo")
+    PROJECT_DIR: str = os.path.join(HOME_DIR, "r3make", "projects")
+    PROJECTS: str = os.path.join(HOME_DIR, "r3make", "projects.json")
+    REMOTE_DIR: str = os.path.join(HOME_DIR, "r3make", "deps", "github", "user", "repo")
 
     def __init__(self) -> None:
         self.mask: int = 0
         self.root: str = '.'
         self.r3make: dict = {}
+        self.projects: dict = {}
         self.commands: list = []
+        self.project: R3Project = None
         self.parser: argparse.ArgumentParser = argparse.ArgumentParser()
 
     @property
@@ -87,169 +63,188 @@ class R3Make:
             expanded += glob.glob(pattern, recursive=True)
         return [file for file in expanded if file.endswith(ext)]
 
+    def getRef(self, ref: str) -> R3Reference:
+        if "::" in ref:
+            name,target = ref.split("::", 1)
+            if name not in self.projects:
+                self.log(f"project not found: {name}", "error")
+                self.log(f"unable to resolve reference: @{ref}", "error")
+                sys.exit(1)
+            
+            projectPath = self.projects[name]
+            if not os.path.exists(projectPath):
+                self.log(f"project not found: {name} @ {projectPath}", "error")
+                self.log(f"unable to resolve reference: @{ref}", "error")
+                sys.exit(1)
 
-    def handleGitHub(self, repo: str, target: R3BuildTarget) -> None:
-        root = self.GHREPO_DIR
+            with open(projectPath, "r") as f:
+                data = json.load(f)
+            with open(os.path.join(data["path"], "r3make.json"), "r") as f:
+                projectData = json.load(f)
+            project = R3Project(projectData, data["path"])
+
+            if target not in project.targets:
+                self.log(f"target not found in project: {target}", "error")
+                self.log(f"unable to resolve reference: @{ref}", "error")
+                sys.exit(1)
+            return R3Reference(project, R3BuildTarget(target, projectData[target]))
+
+        if ref not in self.r3make:
+            self.log(f"target not found: {ref}", "error")
+            self.log(f"unable to resolve reference: @{ref}", "error")
+            sys.exit(1)
+        return R3Reference(self.project, R3BuildTarget(ref, self.r3make[ref]))
+
+
+    def handleGitHub(self, repo: str, ref: R3Reference) -> None:
+        root = self.REMOTE_DIR
         path = os.path.join(root, repo)
         path = os.path.join(path, self.root)
-        
         cmd = ["git", "clone", f"https://github.com/{repo}.git", path]
         if not os.path.exists(path):
             os.makedirs(os.path.dirname(path), exist_ok=True)
-
             if subprocess.call(cmd) != 0:
                 self.log(f"dep clone failed: {repo}", "error")
                 return
-
-        # capture local state
-        cwd = os.getcwd()
-        r3makeOld = self.r3make
-
         try:
-            os.chdir(path)
             with open(os.path.join(path, "r3make.json"), "r") as file:
-                r3makeNew = json.load(file)    
+                r3make = json.load(file)
         except FileNotFoundError:
             self.log(f"r3make.json not found for remote dependency: {repo}", "error")
             return
-        finally: os.chdir(cwd)
-
-        dep = R3BuildTarget(r3makeNew["main"])
-        artifact = os.path.join(path, dep.dest, dep.name + dep.artifact)
-        if not os.path.exists(artifact):
-            try:
-                # update local state to remote state
-                os.chdir(path)
-                self.r3make = r3makeNew
-                build = self.build()
-            finally:
-                # restore local state
-                self.r3make = r3makeOld
-                os.chdir(cwd)
-            if not build:
+        project = R3Project(r3make, path)
+        dep = R3Reference(project, R3BuildTarget("main", r3make["main"]))
+        if not os.path.exists(dep.getArtifactPath()):
+            if not self.build(dep):
                 self.log(f"failed building remote dependency: {repo}", "error")
                 return
-        else: build = dep
+        ref.target.ldflags.append(f"-l{dep.target.name}")
+        ref.target.ldflags.append(f"-L{os.path.join(path, dep.target.dest)}")
 
-        target.ldflags.append(f"-L{os.path.join(path, dep.dest)}")
-        target.ldflags.append(f"-l{dep.name}")
+    def handleDest(self, ref: R3Reference) -> None:
+        if ref.target.dest[0] == '@':
+            ref.target.dest = self.getRef(ref.target.dest[1:]).target.dest
 
-    def handleDest(self, target: R3BuildTarget) -> None:
-        if target.dest[0] == '@':
-            if target.dest[1:] not in self.r3make:
-                self.log(f"target not found: {target.dest[1:]}", "error")
-                return False
-            target.dest = self.r3make[target.dest[1:]]["dest"]
+        if not os.path.exists(ref.target.dest):
+            os.makedirs(ref.target.dest, exist_ok=True)
 
-        if not os.path.exists(target.dest):
-            os.makedirs(target.dest, exist_ok=True)
 
-    def handleFlags(self, target: R3BuildTarget) -> None:
-        ccflags = []
-        for flag in target.ccflags:
+    def resolveCCFlags(self, ref: R3Reference) -> list[str]:
+        out = []
+        for flag in ref.target.ccflags:
             if flag[0] == '@':
-                if flag[1:] not in self.r3make:
-                    self.log(f"required flag not found: {flag[1:]}", "error")
-                    return False
-                ccflags.extend(self.r3make[flag[1:]]["ccflags"])
+                child = self.getRef(flag[1:])
+                if child.project.name == ref.project.name\
+                and ref.target.target in flag: continue
+                out.extend(self.resolveCCFlags(child))
             else:
-                ccflags.append(flag)
-        target.ccflags = ccflags
+                out.append(flag)
+        return out
 
-        ldflags = []
-        for flag in target.ldflags:
+    def resolveLDFlags(self, ref: R3Reference) -> list[str]:
+        out = []
+        for flag in ref.target.ldflags:
             if flag[0] == '@':
-                if flag[1:] not in self.r3make:
-                    self.log(f"required flag not found: {flag[1:]}", "error")
-                    return False
-                ldflags.extend(self.r3make[flag[1:]]["ldflags"])
-            else:
-                ldflags.append(flag)
-        target.ldflags = ldflags
+                child = self.getRef(flag[1:])
+                if child.project.name == ref.project.name\
+                and ref.target.target in flag: continue
+                out.extend(self.resolveLDFlags(child)) 
+            else: 
+                out.append(flag) 
+        return out
 
-    def handleSources(self, target: R3BuildTarget) -> None:
-        for path in target.sources:
+    def handleFlags(self, ref: R3Reference) -> None:
+        ref.target.ccflags = self.resolveCCFlags(ref)
+        ref.target.ldflags = self.resolveLDFlags(ref)
+
+
+    def handleSources(self, ref: R3Reference) -> None:
+        for path in ref.target.sources:
             if not os.path.exists(path):
                 self.log(f"source path not found: {path}", "error")
-                return False
+                return
 
-    def handleIncludes(self, target: R3BuildTarget) -> None:
-        includes = []
-        for i,path in enumerate(target.includes):
-            if path[0] != '@' and not os.path.exists(path):
-                self.log(f"include path not found: {path}", "error")
-                return False
+    
+    def resolveIncludes(self, ref: R3Reference) -> list[str]:
+        out = []
+        for inc in ref.target.includes:
+            if inc[0] == '@':
+                child = self.getRef(inc[1:])
+                if child.project.name == ref.project.name\
+                and ref.target.target in inc: continue
+                out.extend(self.resolveIncludes(child))
+            else: out.append(os.path.join(ref.path, inc))
+        return out
 
-            if path[0] == '@':
-                path = path[1:]
-                if path not in self.r3make:
-                    self.log(f"required include not found: {path}", "error")
-                    return False
-                
-                includes.extend(target.includes[:i])
-                includes.extend(target.includes[i+1:])
+    def handleIncludes(self, ref: R3Reference) -> None:
+        ref.target.includes = self.resolveIncludes(ref)
+        for include in ref.target.includes:
+            if not os.path.exists(include):
+                self.log(f"include path not found: {include}", "error")
+                return
 
-                req = self.r3make[path]["includes"]
-                for inc in req:
-                    if inc[0] != '@' and not os.path.exists(inc):
-                        self.log(f"required include not found: {inc}", "error")
-                        return False
-                includes.extend(self.r3make[path]["includes"])
 
-            else: includes.append(path)
-        target.includes = includes
-
-    def handleRequires(self, target: R3BuildTarget) -> None:
+    def handleRequires(self, ref: R3Reference) -> None:
+        target = ref.target
         for req in target.requires:
             if req[0] == '@':
-                if req[1:] not in self.r3make:
-                    self.log(f"required target not found: {req[1:]}", "error")
-                    return False
-                req = self.r3make[req[1:]]["requires"]
-            else:
-                if req not in self.r3make:
-                    self.log(f"required target not found: {req}", "error")
-                    return False
-            
-            if not (build := self.build(req)):
-                self.log(f"failed making required target: {req}", "error")
-                return False
-            target.deps.append(f"{build.dest}:{build.name}")
+                required = self.getRef(req[1:])
+            else: required = self.getRef(req)
+            if ref.project.name == required.project.name\
+            and target.target in req: continue
 
-    def handleDependencies(self, target: R3BuildTarget) -> None:
-        deps = []
-        for dep in target.deps:
+            if not (build := self.build(required)):
+                self.log(f"failed making required target: {required.target.name}", "error")
+                return
+            target.deps.append(build.getArtifactDir()+"::"+build.target.name)
+            target.includes.extend(build.target.includes)
+
+
+    def resolveDependencies(self, ref: R3Reference) -> list[str]:
+        out = []
+        for dep in ref.target.deps:
             if dep[0] == '@':
-                if dep[1:] not in self.r3make:
-                    self.log(f"required dependency not found: {dep[1:]}", "error")
-                    return False
-                deps.extend(self.r3make[dep[1:]].get("deps", []))
+                if ref.target.target in dep: continue
+                child = self.getRef(dep[1:])
+                if child.project.name == ref.project.name\
+                and ref.target.target in dep: continue
+                if not os.path.exists(child.getArtifactPath()):
+                    if not self.build(child):
+                        self.log(f"dependency failed to build: {child.target.name}", "error")
+                        sys.exit(1)
+                out.append(child.getArtifactDir()+"::"+child.target.name)
+                out.extend(self.resolveDependencies(child))
             else:
-                deps.append(dep)
-
-        target.deps = deps
-        for dep in target.deps:
-            prefix,suffix = dep.split(":")
+                prefix, suffix = dep.split("::")
+                if prefix not in ['~', "github"]:
+                    prefix = os.path.join(ref.path, prefix)
+                out.append(prefix+"::"+suffix)
+        return out
+    
+    def handleDependencies(self, ref: R3Reference) -> None:
+        ref.target.deps = self.resolveDependencies(ref)
+        for dep in ref.target.deps:
+            prefix,suffix = dep.split("::")
             if prefix == "github":
-                self.handleGitHub(suffix, target)
+                self.handleGitHub(suffix, ref)
             else:
                 if prefix != '~' and not os.path.exists(prefix):
-                    self.log(f"CWD{os.getcwd()}| dep {dep} path not found: {prefix}", "error")
-                    return False
-                target.ldflags.append(f"-l{suffix}")
+                    self.log(f"CWD ({os.getcwd()})| dep {dep} path not found: {prefix}", "error")
+                    return
+                ref.target.ldflags.append(f"-l{suffix}")
                 if prefix != '~':
-                    target.ldflags.append(f"-L{prefix}")
+                    ref.target.ldflags.append(f"-L{prefix}")
 
 
-    def comp(self, comp: str, target: R3BuildTarget, sources: list[str]|None=None) -> None:
+    def comp(self, comp: str, ref: R3Reference, sources: list[str]|None=None) -> None:
         base = [comp]
-        base.extend(target.getCCFlags())
-        base.extend(target.getDefines())
-        base.extend(target.getIncludes())
+        base.extend(ref.target.getCCFlags())
+        base.extend(ref.target.getDefines())
+        base.extend(ref.target.getIncludes())
 
-        sources = sources if sources is not None else self.getGlob(target.sources, ".c")
+        sources = sources if sources is not None else self.getGlob(ref.target.sources, ".c")
         for src in sources:
-            obj = os.path.join(target.dest, Path(src).stem + ".o")
+            obj = os.path.join(ref.target.dest, Path(src).stem + ".o")
             cmd = [*base, "-c", src, "-o", obj]
 
             if self.verbose: 
@@ -264,88 +259,189 @@ class R3Make:
                 if dump not in self.commands:
                     self.commands.append(dump)
             if subprocess.call(cmd) == 0:
-                target.objs.append(obj)
+                ref.target.objs.append(obj)
                 if self.verbose: 
                     self.log(f"compiled: {src}", "info")
             else:
                 self.log(f"compilation failed: {src}", "error")
 
-    def link(self, comp: str, target: R3BuildTarget, out: str|None=None) -> bool:
-        out = os.path.join(target.dest, (out if out else target.name) + target.artifact)
-        match target.type:
-            case "lib"|"static": 
-                cmd = ["ar", "rcs", out, *target.objs]
-                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
-                return subprocess.call(cmd) == 0
-            case "exe"|"executable":
-                cmd = [comp, *target.objs, *target.getLDFlags(), "-o", out]
-                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
-                return subprocess.call(cmd) == 0
-            case "so"|"dll"|"shared"|"dynamic":
-                cmd = [comp, "-shared", *target.objs, *target.getLDFlags(), "-o", out]
-                if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
-                return subprocess.call(cmd) == 0
+    def link(self, comp: str, ref: R3Reference, out: str|None=None) -> bool:
+        out = os.path.join(ref.target.dest, (out if out else ref.target.name) + ref.target.artifact)
+        if ref.target.type in ["lib","static"]:
+            cmd = ["ar", "rcs", out, *ref.target.objs]
+            if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
+            return subprocess.call(cmd) == 0
+        if ref.target.type in ["exe","executable"]:
+            cmd = [comp, *ref.target.objs, *ref.target.getLDFlags(), "-o", out]
+            if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
+            return subprocess.call(cmd) == 0
+        if ref.target.type in ["so","dll","shared","dynamic"]:
+            cmd = [comp, "-shared", *ref.target.objs, *ref.target.getLDFlags(), "-o", out]
+            if self.verbose: self.log(f"linking: {" ".join(cmd)}", "info")
+            return subprocess.call(cmd) == 0
     
-    def build(self, t: str="main") -> R3BuildTarget|None:
-        os.chdir(self.root)
+    def build(self, ref: R3Reference) -> R3Reference|None:
+        cwd = os.getcwd()
+        if not os.path.exists(ref.path):
+            self.log(f"project path does not exist: {ref.path}", "error")
+            return
+        try:
+            os.chdir(ref.path)
 
-        if t not in self.r3make:
-            self.log(f"target not found: {t}", "error")
-            return None
-        
-        target = R3BuildTarget(self.r3make[t])
-        if target.name is None: target.name = t
+            target = ref.target
+            if target.name is None: target.name = target.target
 
-        if self.verbose:
-            self.log(f"making: {target.name}", "info")
+            if self.verbose:
+                self.log(f"making: {target.name}", "info")
 
-        comp = self.getCompiler()
-        if comp is None:
-            self.log("no compiler found.", "error")
+            comp = self.getCompiler()
+            if comp is None:
+                self.log("no compiler found.", "error")
+                return
+
+            if self.dump:
+                try:
+                    with open("compile_commands.json", "r") as f:
+                        self.commands = json.load(f)
+                except (json.JSONDecodeError, IOError):
+                    pass
+
+            self.handleDest(ref)
+            self.handleFlags(ref)
+            self.handleSources(ref)
+            self.handleIncludes(ref)
+            self.handleRequires(ref)
+            self.handleDependencies(ref)
+
+            if not self.multi:
+                self.comp(comp, ref)
+                if not self.link(comp, ref): return
+            else:
+                objs = []
+                for src in self.getGlob(target.sources, ".c"):
+                    self.comp(comp, target, [src])
+                    if not self.link(comp, target, Path(src).stem): return
+                    objs.extend(target.objs)
+                    target.objs.clear()
+                target.objs = objs
+            if self.clean:
+                for obj in target.objs:
+                    if os.path.exists(obj):
+                        os.remove(obj)
+
+            if self.run and target.type in ["exe", "executable"]:
+                artifact = target.getArtifactPath()
+                if os.path.exists(artifact): subprocess.run([artifact])
+
+            if self.dump:
+                try:
+                    with open("compile_commands.json", "w") as f:
+                        json.dump(self.commands, f, indent=4)
+                except IOError: self.log("command dump failed", "error")
+
+            self.log(f"made: {target.name} @ {target.dest}", "info")
+            return R3Reference(ref.project, target)
+        finally: os.chdir(cwd)
+
+
+    def listProjects(self) -> None:
+        rem = []
+        self.log("stored projects", "info")
+        for name, path in self.projects.items():
+            if not os.path.exists(path):
+                self.log(f"project not found: {name} @ {path}", "error")
+                rem.append(name)
+                continue
+
+            with open(self.projects[name], "r") as f:
+                data = json.load(f)
+            r3makePath = os.path.join(data["path"], "r3make.json")
+
+            if not os.path.exists(r3makePath):
+                self.log(f"r3make.json not found for project: {name} @ {r3makePath}", "error")
+                rem.append(name)
+                continue
+
+            with open(r3makePath, "r") as f:
+                projectData = json.load(f)
+            project = R3Project(projectData, data["path"])
+
+            print("----------------------------------")
+            print(f"project: {name}\ntargets:")
+            for target in project.targets.values():
+                print(f"{target.target}: name={target.name} type={target.type}")
+            print("----------------------------------")
+        for name in rem: self.removeProject(name)
+
+    def storeProject(self, name: str) -> None:
+        path = os.path.join(self.PROJECT_DIR, f"{name}.json")
+        try:
+            with open(path, "w") as f:
+                json.dump(self.project.data, f, indent=4)
+        except IOError:
+            self.log("project store failed", "error")
+            sys.exit(1)
+
+        self.projects[name] = path
+        try:
+            with open(self.PROJECTS, "w") as f:
+                json.dump(self.projects, f, indent=4)
+        except IOError:
+            self.log("projects store failed", "error")
+            sys.exit(1)
+        self.log(f"stored project: {name}", "info")
+
+    def removeProject(self, name: str) -> None:
+        if name not in self.projects:
+            self.log(f"project not found: {name}", "error")
             return
 
-        if self.dump:
-            try:
-                with open("compile_commands.json", "r") as f:
-                    self.commands = json.load(f)
-            except (json.JSONDecodeError, IOError):
-                pass
+        path = self.projects[name]
+        if not os.path.exists(path):
+            self.log(f"project not found: {name} @ {path}", "error")
+            sys.exit(1)
 
-        self.handleDest(target)
-        self.handleFlags(target)
-        self.handleSources(target)
-        self.handleIncludes(target)
-        self.handleRequires(target)
-        self.handleDependencies(target)
+        del self.projects[name]
+        try:
+            with open(self.PROJECTS, "w") as f:
+                json.dump(self.projects, f, indent=4)
+        except IOError:
+            self.log("projects remove failed", "error")
+            sys.exit(1)
+        os.remove(path)
+        self.log(f"removed project: {name}", "info")
 
-        if not self.multi:
-            self.comp(comp, target)
-            if not self.link(comp, target): return
-        else:
-            objs = []
-            for src in self.getGlob(target.sources, ".c"):
-                self.comp(comp, target, [src])
-                if not self.link(comp, target, Path(src).stem): return
-                objs.extend(target.objs)
-                target.objs.clear()
-            target.objs = objs
-        if self.clean:
-            for obj in target.objs:
-                if os.path.exists(obj):
-                    os.remove(obj)
+    def renameProject(self, old: str, new: str) -> None:
+        if old not in self.projects:
+            self.log(f"project not found: {old}", "error")
+            return
 
-        if self.run and target.type in ["exe", "executable"]:
-            artifact = os.path.join(target.dest, target.name + target.artifact)
-            if os.path.exists(artifact): subprocess.run([artifact])
+        oldPath = self.projects[old]
+        newPath = os.path.join(self.PROJECT_DIR, f"{new}.json")
+        if not os.path.exists(oldPath):
+            self.log(f"old project not found: {old} @ {oldPath}", "error")
+            sys.exit(1)
 
-        if self.dump:
-            try:
-                with open("compile_commands.json", "w") as f:
-                    json.dump(self.commands, f, indent=4)
-            except IOError: self.log("command dump failed", "error")
+        del self.projects[old]
+        self.projects[new] = newPath
+        try:
+            with open(oldPath, "r") as f:
+                oldData = json.load(f)
 
-        self.log(f"made: {target.name} @ {target.dest}", "info")
-        return target
+            with open(newPath, "w") as f:
+                json.dump(oldData, f, indent=4)
+        except IOError:
+            self.log("project rename failed", "error")
+            sys.exit(1)        
+
+        os.remove(oldPath)
+        try:
+            with open(self.PROJECTS, "w") as f:
+                json.dump(self.projects, f, indent=4)
+        except IOError:
+            self.log("projects rename failed", "error")
+            sys.exit(1)
+        self.log(f"renamed project: {old} -> {new}", "info")
 
 
     def newArg(
@@ -375,9 +471,23 @@ class R3Make:
             )
 
     def main(self) -> None:
-        self.newArg("target", "t")
+        if not os.path.exists(self.REMOTE_DIR):
+            os.makedirs(self.REMOTE_DIR, exist_ok=True)
+        if not os.path.exists(self.PROJECT_DIR):
+            os.makedirs(self.PROJECT_DIR, exist_ok=True)
+        if not os.path.exists(self.PROJECTS):
+            with open(self.PROJECTS, "w") as f:
+                json.dump({}, f, indent=4)
+        with open(self.PROJECTS, "r") as f:
+            self.projects = json.load(f)
+
+        self.newArg("target", "t", default="main")
+        self.newArg("remove", "rem")
+        self.newArg("rename", "ren", nargs=2)
         self.newArg("run", "r", empty=True)
         self.newArg("dump", "d", empty=True)
+        self.newArg("store", "s", empty=True)
+        self.newArg("list", "ls", empty=True)
         self.newArg("multi", "m", empty=True)
         self.newArg("clean", "c", empty=True)
         self.newArg("version", "v", empty=True)
@@ -400,16 +510,35 @@ class R3Make:
         except FileNotFoundError:
             self.log("r3make.json not found.", "error")
             return
+        if args.target not in self.r3make:
+            self.log(f"target not found: {args.target}", "error")
+            return
+        
+        self.project = R3Project(self.r3make, os.getcwd())
+        if args.store:
+            name = self.r3make.get("project", None)
+            if name is None:
+                self.log("project name required for storage.", "error")
+                return
+            self.storeProject(name)
+            return
 
-        if not os.path.exists(self.GHREPO_DIR):
-            os.makedirs(self.GHREPO_DIR, exist_ok=True)
+        if args.list:
+            self.listProjects()
+            return
+        if args.remove:
+            self.removeProject(args.remove)
+            return
+        if args.rename:
+            self.renameProject(args.rename[0], args.rename[1])
+            return
 
         self.root = self.r3make.get("root", '.')
-        target = args.target if args.target else "main"
-        if target == "all":
+        if args.target == "all":
             for t in self.r3make.get("all", []):
-                self.build(t)
-        else: self.build(target)
+                target = R3BuildTarget(t, self.r3make[t])
+                self.build(R3Reference(self.project, target))
+        else: self.build(R3Reference(self.project, R3BuildTarget(args.target, self.r3make[args.target])))
 
 
 def main() -> None:
